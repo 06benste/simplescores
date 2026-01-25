@@ -72,21 +72,39 @@ def parse_time_12hr(time_str: str) -> tuple[int, int] | None:
     return (hour, minute)
 
 
+def _parse_date_header(date_text: str, today: date) -> bool:
+    """Parse date header in format 'Thursday 1st January' and check if it matches today."""
+    if not date_text:
+        return False
+    
+    date_text = date_text.strip()
+    date_lower = date_text.lower()
+    
+    # Check for "yesterday" - exclude these
+    if "yesterday" in date_lower:
+        return False
+    
+    # Parse format: "Thursday 1st January" or "Thursday 1 January"
+    today_day = today.strftime("%A").lower()
+    today_date_str = today.strftime("%d").lstrip("0")  # "25" or "5"
+    today_month = today.strftime("%B").lower()  # "january"
+    
+    # Check exact format: "DayName DayNumber[st/nd/rd/th] MonthName"
+    pattern = rf'^{re.escape(today_day)}\s+{today_date_str}(?:st|nd|rd|th)?\s+{re.escape(today_month)}$'
+    if re.match(pattern, date_lower):
+        return True
+    
+    # Also check without ordinal: "Thursday 1 January"
+    pattern_alt = rf'^{re.escape(today_day)}\s+{today_date_str}\s+{re.escape(today_month)}$'
+    if re.match(pattern_alt, date_lower):
+        return True
+    
+    return False
+
+
 def fetch_today_fixtures() -> list[tuple[int, int]]:
     """Fetch all fixture times for today across all leagues. Returns list of (hour, minute) tuples."""
     today = date.today()
-    day_name = today.strftime("%A")
-    day_num = today.day
-    month_name = today.strftime("%B")
-    
-    # Add ordinal suffix
-    if 10 <= day_num % 100 <= 20:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day_num % 10, "th")
-    
-    today_str = f"{day_name} {day_num}{suffix} {month_name}"
-    today_str_alt = f"{day_name} {day_num} {month_name}"
     
     fixture_times = []
     
@@ -109,24 +127,33 @@ def fetch_today_fixtures() -> list[tuple[int, int]]:
                 current = match_section.find_previous()
                 
                 while current:
-                    if current.name == "div" and "ui-sitewide-component-header__wrapper--h3" in current.get("class", []):
-                        date_header = current
-                        break
+                    if current.name == "div":
+                        classes = current.get("class", [])
+                        if isinstance(classes, list) and any("ui-sitewide-component-header__wrapper--h3" in str(c) for c in classes):
+                            date_header = current
+                            break
                     if current.name == "div" and "ui-tournament-matches" in current.get("class", []):
                         break
                     current = current.find_previous()
                 
                 section_date = ""
                 if date_header:
+                    # Look for span with data-role="short-text-target" (the exact structure)
                     date_span = date_header.find("span", {"data-role": "short-text-target"})
                     if date_span:
                         section_date = date_span.get_text(strip=True)
+                    else:
+                        # Fallback: try to find any text in the header
+                        header_text = date_header.get_text(strip=True)
+                        if header_text:
+                            section_date = header_text
                 
-                # Check if this is today's section
-                is_today = (
-                    section_date.lower() == today_str.lower() or
-                    section_date.lower() == today_str_alt.lower()
-                )
+                # Only include matches from sections with today's date header
+                if not section_date:
+                    continue
+                
+                # Check if this is today's section using the precise date header parser
+                is_today = _parse_date_header(section_date, today)
                 
                 if not is_today:
                     continue

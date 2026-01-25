@@ -71,6 +71,37 @@ USER_AGENT = (
 # -----------------------------------------------------------------------------
 
 
+def _parse_date_header(date_text: str, today: date) -> bool:
+    """Parse date header in format 'Thursday 1st January' and check if it matches today."""
+    if not date_text:
+        return False
+    
+    date_text = date_text.strip()
+    date_lower = date_text.lower()
+    
+    # Check for "yesterday" - exclude these
+    if "yesterday" in date_lower:
+        return False
+    
+    # Parse format: "Thursday 1st January" or "Thursday 1 January"
+    today_day = today.strftime("%A").lower()
+    today_date_str = today.strftime("%d").lstrip("0")  # "25" or "5"
+    today_month = today.strftime("%B").lower()  # "january"
+    
+    # Check exact format: "DayName DayNumber[st/nd/rd/th] MonthName"
+    # Pattern: day name, optional whitespace, day number with optional ordinal, optional whitespace, month name
+    pattern = rf'^{re.escape(today_day)}\s+{today_date_str}(?:st|nd|rd|th)?\s+{re.escape(today_month)}$'
+    if re.match(pattern, date_lower):
+        return True
+    
+    # Also check without ordinal: "Thursday 1 January"
+    pattern_alt = rf'^{re.escape(today_day)}\s+{today_date_str}\s+{re.escape(today_month)}$'
+    if re.match(pattern_alt, date_lower):
+        return True
+    
+    return False
+
+
 def _extract_date_from_context(context: str, today: date) -> bool:
     """Check if context contains today's date indicators."""
     context_lower = context.lower()
@@ -232,44 +263,52 @@ def scrape_scores() -> dict:
             seen = set()
             
             # Find all match sections and check their associated date headers
+            # Look for date headers with the exact structure: div with class containing "ui-sitewide-component-header__wrapper--h3"
+            # containing a span with data-role="short-text-target" with date text like "Thursday 1st January"
             match_sections = soup.find_all("div", class_="ui-tournament-matches")
             
             for match_section in match_sections:
                 # Find the preceding date header for this match section
+                # Search backwards through siblings and parents
                 date_header = None
                 current = match_section.find_previous()
                 
                 # Search backwards for the date header
                 while current:
-                    if current.name == "div" and "ui-sitewide-component-header__wrapper--h3" in current.get("class", []):
-                        date_header = current
-                        break
+                    # Check if this is a date header div with the expected class
+                    if current.name == "div":
+                        classes = current.get("class", [])
+                        if isinstance(classes, list) and any("ui-sitewide-component-header__wrapper--h3" in str(c) for c in classes):
+                            date_header = current
+                            break
                     # Stop if we hit another match section (means we've gone too far)
                     if current.name == "div" and "ui-tournament-matches" in current.get("class", []):
                         break
                     current = current.find_previous()
                 
-                # If no date header found, skip this section (or include if we want to be lenient)
+                # Extract date text from the header
                 section_date = ""
                 if date_header:
+                    # Look for span with data-role="short-text-target" (the exact structure user showed)
                     date_span = date_header.find("span", {"data-role": "short-text-target"})
                     if date_span:
                         section_date = date_span.get_text(strip=True)
+                    else:
+                        # Fallback: try to find any text in the header
+                        header_text = date_header.get_text(strip=True)
+                        if header_text:
+                            section_date = header_text
                 
-                # Check if this is today's section
-                is_today = False
-                if section_date:
-                    is_today = (
-                        section_date.lower() == today_str.lower() or
-                        section_date.lower() == today_str_alt.lower() or
-                        _extract_date_from_context(section_date.lower(), today)
-                    )
-                else:
-                    # If no date header found, check match data for date
-                    # This is a fallback - we'll check individual matches
-                    pass
+                # Only include matches from sections with today's date header
+                # If no date header found, skip this section entirely (be strict)
+                if not section_date:
+                    continue
                 
-                if section_date and not is_today:
+                # Check if this is today's section using the precise date header parser
+                is_today = _parse_date_header(section_date, today)
+                
+                # If section date doesn't match today, skip all matches in this section
+                if not is_today:
                     continue
                 
                 # Extract matches from this section
@@ -286,20 +325,19 @@ def scrape_scores() -> dict:
                     except json.JSONDecodeError:
                         continue
                     
-                    # Check date in match data as fallback
+                    # Additional validation: check date in match data if available
+                    # This is a secondary check since we've already filtered by section date header
                     match_date = match_data.get("start", {}).get("date", "")
                     if match_date:
                         match_is_today = (
                             match_date.lower() == today_str.lower() or
                             match_date.lower() == today_str_alt.lower() or
+                            _parse_date_header(match_date, today) or
                             _extract_date_from_context(match_date.lower(), today)
                         )
-                        # If we have a date in match data and it's not today, skip
+                        # If match data explicitly says it's not today, skip (double-check)
                         if not match_is_today:
                             continue
-                    elif not is_today:
-                        # If no date in match data and section isn't today, skip
-                        continue
                     
                     # Extract team names
                     home_team = match_data.get("teams", {}).get("home", {}).get("name", {}).get("full", "")
