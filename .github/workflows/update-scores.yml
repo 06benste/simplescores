@@ -41,7 +41,7 @@ jobs:
           python -c "
           import json
           import sys
-          from datetime import datetime
+          from datetime import datetime, UTC, date
           from pathlib import Path
           
           schedule_file = Path('.github/schedule.json')
@@ -51,18 +51,22 @@ jobs:
           
           try:
               schedule = json.loads(schedule_file.read_text())
-          except:
-              print('Error reading schedule file. Running scraper anyway.')
+          except Exception as e:
+              print(f'Error reading schedule file: {e}. Running scraper anyway.')
               sys.exit(0)
           
           # Check if schedule is for today
-          from datetime import date
           if schedule.get('date') != date.today().isoformat():
               print(f'Schedule is for {schedule.get(\"date\")}, not today. Skipping.')
               sys.exit(1)
           
+          # Check if there are any games scheduled
+          if not schedule.get('has_games', False):
+              print('No games scheduled for today. Skipping.')
+              sys.exit(1)
+          
           # Check if we should run now
-          now = datetime.utcnow()
+          now = datetime.now(UTC)
           current_time = (now.hour, now.minute)
           
           # Round current minute to nearest 30 (since we run every 30 min)
@@ -70,11 +74,14 @@ jobs:
           current_time_rounded = (current_time[0], rounded_minute)
           
           run_times = schedule.get('run_times', [])
-          if current_time_rounded in run_times:
+          # Convert run_times to tuples for comparison (they're stored as lists in JSON)
+          run_times_tuples = [tuple(rt) if isinstance(rt, list) else rt for rt in run_times]
+          
+          if current_time_rounded in run_times_tuples:
               print(f'Current time {current_time_rounded} matches schedule. Running scraper.')
               sys.exit(0)
           else:
-              print(f'Current time {current_time_rounded} not in schedule {run_times}. Skipping.')
+              print(f'Current time {current_time_rounded} not in schedule {run_times_tuples}. Skipping.')
               sys.exit(1)
           "
       
