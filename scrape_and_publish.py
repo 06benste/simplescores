@@ -76,21 +76,42 @@ def _extract_date_from_context(context: str, today: date) -> bool:
     context_lower = context.lower()
     today_day = today.strftime("%A").lower()
     today_date_str = today.strftime("%d").lstrip("0")  # "25" or "5"
+    today_date_padded = today.strftime("%d")  # "25" or "05"
     today_month = today.strftime("%B").lower()  # "january"
     today_month_short = today.strftime("%b").lower()  # "jan"
+    today_month_num = today.strftime("%m")  # "01"
+    today_year = today.strftime("%Y")  # "2026"
+    today_year_short = today.strftime("%y")  # "26"
     
-    # Check for today's day name
-    if today_day in context_lower:
-        # Make sure it's not part of another word
-        day_pattern = r'\b' + re.escape(today_day) + r'\b'
-        if re.search(day_pattern, context_lower):
-            return True
+    # Check for "yesterday" - exclude these
+    if re.search(r'\byesterday\b', context_lower):
+        return False
     
-    # Check for today's date (e.g., "25 January", "Jan 25", "25th")
+    # Check for explicit past dates (yesterday)
+    yesterday = date.fromordinal(today.toordinal() - 1)
+    yesterday_day = yesterday.strftime("%A").lower()
+    yesterday_date_str = yesterday.strftime("%d").lstrip("0")
+    if re.search(rf'\b{yesterday_day}\b', context_lower):
+        return False
+    if re.search(rf'\b{yesterday_date_str}\s+{yesterday.strftime("%B").lower()}\b', context_lower):
+        return False
+    
+    # Check for today's day name (with word boundaries)
+    day_pattern = r'\b' + re.escape(today_day) + r'\b'
+    if re.search(day_pattern, context_lower):
+        return True
+    
+    # Check for today's date in various formats
     date_patterns = [
-        rf'\b{today_date_str}\s+{today_month}\b',
-        rf'\b{today_month_short}\s+{today_date_str}\b',
-        rf'\b{today_date_str}(?:st|nd|rd|th)?\s+{today_month}\b',
+        rf'\b{today_date_str}\s+{today_month}\b',  # "25 january"
+        rf'\b{today_date_padded}\s+{today_month}\b',  # "25 january" (with leading zero)
+        rf'\b{today_month_short}\s+{today_date_str}\b',  # "jan 25"
+        rf'\b{today_month_short}\s+{today_date_padded}\b',  # "jan 25" (with leading zero)
+        rf'\b{today_date_str}(?:st|nd|rd|th)?\s+{today_month}\b',  # "25th january"
+        rf'\b{today_date_str}[/-]{today_month_num}[/-]{today_year}\b',  # "25/01/2026" or "25-01-2026"
+        rf'\b{today_date_padded}[/-]{today_month_num}[/-]{today_year}\b',  # "25/01/2026" (padded)
+        rf'\b{today_date_str}[/-]{today_month_num}[/-]{today_year_short}\b',  # "25/01/26"
+        rf'\b{today_date_padded}[/-]{today_month_num}[/-]{today_year_short}\b',  # "25/01/26" (padded)
     ]
     for pattern in date_patterns:
         if re.search(pattern, context_lower):
@@ -136,9 +157,16 @@ def _is_today_match(match: dict, match_text: str = "", context: str = "") -> boo
             return True
         return False
 
-    # For finished matches, only include if we can confirm it's today
+    # For finished matches, be VERY strict - only include if we can definitively confirm it's today
+    # This prevents old matches from appearing. If we can't find today's date, exclude it.
     if match.get("status") == "FT":
-        return has_today_date
+        # Must have explicit confirmation - no assumptions allowed
+        if not has_today_date:
+            return False
+        # Double-check: if "yesterday" appears anywhere, exclude
+        if "yesterday" in full_context:
+            return False
+        return True
     
     # For other statuses (AET, etc.), only include if today's date is found
     return has_today_date
@@ -174,10 +202,11 @@ def scrape_scores() -> dict:
                 all_text,
             ):
                 t1_full, s1, s2, t2_full = m.group(1).strip(), m.group(2), m.group(3), m.group(4).strip()
-                start = max(0, m.start() - 200)
-                ctx = all_text[start : m.start() + 300].lower()
+                # Extract larger context for better date detection
+                start = max(0, m.start() - 500)
+                ctx = all_text[start : m.start() + 500].lower()
                 hp = html_text.lower().find(f"{t1_full} {s1}")
-                hctx = html_text[max(0, hp - 300) : hp + 400].lower() if hp >= 0 else ""
+                hctx = html_text[max(0, hp - 500) : hp + 600].lower() if hp >= 0 else ""
                 min_pat = r"\d+['\']|['\']\s*$|\d+\s*min"
                 live = bool(re.search(min_pat, ctx)) or bool(re.search(min_pat, hctx))
                 live_t = "live" in ctx or "live" in hctx
@@ -193,8 +222,12 @@ def scrape_scores() -> dict:
                 key = f"{t1}_{s1}_{t2}_{s2}"
                 if key not in seen and t1 and t2 and len(t1) > 2 and len(t2) > 2:
                     seen.add(key)
-                    # Combine context for date checking
-                    combined_ctx = ctx + " " + hctx
+                    # Extract larger context for better date detection (500 chars before/after)
+                    start_large = max(0, m.start() - 500)
+                    ctx_large = all_text[start_large : m.start() + 600].lower()
+                    hp_large = html_text.lower().find(f"{t1_full} {s1}")
+                    hctx_large = html_text[max(0, hp_large - 500) : hp_large + 600].lower() if hp_large >= 0 else ""
+                    combined_ctx = ctx_large + " " + hctx_large
                     matches.append({
                         "team1": t1, "team2": t2, "score1": s1, "score2": s2,
                         "status": status, "date_time": "", "text": f"{t1_full} {s1} - {s2} {t2_full}",
@@ -221,11 +254,11 @@ def scrape_scores() -> dict:
                     status = "AET"
                 if t1 and t2 and len(t1) > 2 and len(t2) > 2:
                     seen.add(key)
-                    # Extract context around this match
+                    # Extract larger context around this match for date detection
                     match_idx = all_text.find(f"{t1_full}, {s1}")
                     if match_idx >= 0:
-                        ctx_start = max(0, match_idx - 300)
-                        match_ctx = all_text[ctx_start:match_idx + 400].lower()
+                        ctx_start = max(0, match_idx - 500)
+                        match_ctx = all_text[ctx_start:match_idx + 500].lower()
                     else:
                         match_ctx = ""
                     matches.append({
@@ -247,11 +280,11 @@ def scrape_scores() -> dict:
                 key = f"{t1}_v_{t2}_{dt}"
                 if key not in seen and t1 and t2:
                     seen.add(key)
-                    # Extract context around this fixture
+                    # Extract larger context around this fixture for date detection
                     match_idx = all_text.find(f"{t1_full} vs {t2_full}")
                     if match_idx >= 0:
-                        ctx_start = max(0, match_idx - 300)
-                        match_ctx = all_text[ctx_start:match_idx + 400].lower()
+                        ctx_start = max(0, match_idx - 500)
+                        match_ctx = all_text[ctx_start:match_idx + 500].lower()
                     else:
                         match_ctx = ""
                     matches.append({
