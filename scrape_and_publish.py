@@ -72,32 +72,37 @@ USER_AGENT = (
 
 
 def _is_today_match(match: dict, match_text: str = "") -> bool:
+    # Always include live matches
     if match.get("status") in ("LIVE", "HT"):
         return True
+    
     text = (match_text or match.get("text") or "").lower()
     today = date.today()
     today_day = today.strftime("%A").lower()
     day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
+    # Check if text explicitly mentions a different day
+    for d in day_names:
+        if d in text and d != today_day:
+            return False
+    
+    # For fixtures, include if:
+    # 1. Today's day name is mentioned, OR
+    # 2. Has a time (assumed to be today if no other day mentioned)
     if match.get("status") == "FIXTURE":
         if today_day in text:
             return True
-        for d in day_names:
-            if d in text and d != today_day:
-                return False
         if match.get("date_time") and re.match(r"\d{1,2}:\d{2}[ap]m", match.get("date_time", "")):
             return True
-        return True
+        # If no day mentioned and no time, exclude to be safe
+        return False
 
+    # For finished matches, only include if today's day is mentioned
     if match.get("status") == "FT":
-        if today_day in text:
-            return True
-        for d in day_names:
-            if d in text and d != today_day:
-                return False
-        return True
-
-    return True
+        return today_day in text
+    
+    # For other statuses (AET, etc.), only include if today's day is mentioned
+    return today_day in text
 
 
 def _clean_team(words: list[str], take_last: bool, max_words: int = 3) -> str:
