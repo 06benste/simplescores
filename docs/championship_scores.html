@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Championship Scores</title>
+    <style>
+        body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        h1 { margin-bottom: 20px; font-weight: 600; }
+        table { border-collapse: collapse; width: 100%; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; }
+        th, td { border: 1px solid #30363d; padding: 10px 12px; text-align: left; }
+        th { background: #161b22; color: #8b949e; font-weight: 500; }
+        tr:nth-child(even) { background: #161b22; }
+        .status { font-size: 0.9rem; }
+        .status-LIVE { color: #3fb950; }
+        .status-HT { color: #d29922; }
+        .status-FIXTURE { color: #58a6ff; }
+        .meta { margin-top: 20px; font-size: 0.85rem; color: #8b949e; }
+        .error { color: #f85149; }
+    </style>
+</head>
+<body>
+    <p><a href="index.html">← Back</a></p>
+    <h1>Championship Scores</h1>
+    
+    <table>
+        <thead><tr><th>Team 1</th><th>Score</th><th>Team 2</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>
+        
+        <tr>
+            <td>Blackburn Rovers</td>
+            <td>0 – 2</td>
+            <td>Wrexham</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Bristol City</td>
+            <td>5 – 0</td>
+            <td>Portsmouth</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Charlton Athletic</td>
+            <td>1 – 1</td>
+            <td>Coventry City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Derby County</td>
+            <td>1 – 0</td>
+            <td>Middlesbrough</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Hull City</td>
+            <td>0 – 1</td>
+            <td>Stoke City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Ipswich Town</td>
+            <td>2 – 1</td>
+            <td>Oxford United</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Queens Park Rangers</td>
+            <td>1 – 2</td>
+            <td>Norwich City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Southampton</td>
+            <td>0 – 0</td>
+            <td>Millwall</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Swansea City</td>
+            <td>1 – 0</td>
+            <td>West Bromwich Albion</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Watford</td>
+            <td>3 – 0</td>
+            <td>Birmingham City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Sheffield United</td>
+            <td>3 – 1</td>
+            <td>Leicester City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Birmingham City</td>
+            <td>3 – 2</td>
+            <td>Coventry City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Blackburn Rovers</td>
+            <td>2 – 2</td>
+            <td>Charlton Athletic</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Bristol City</td>
+            <td>0 – 2</td>
+            <td>Preston North End</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Derby County</td>
+            <td>1 – 2</td>
+            <td>Wrexham</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Middlesbrough</td>
+            <td>4 – 0</td>
+            <td>Southampton</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Millwall</td>
+            <td>2 – 1</td>
+            <td>Swansea City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Norwich City</td>
+            <td>0 – 2</td>
+            <td>Stoke City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Leicester City</td>
+            <td>2 – 1</td>
+            <td>West Bromwich Albion</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>West Bromwich Albion</td>
+            <td>2 – 3</td>
+            <td>Middlesbrough</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Coventry City</td>
+            <td>2 – 1</td>
+            <td>Leicester City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Ipswich Town</td>
+            <td>3 – 0</td>
+            <td>Blackburn Rovers</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Watford</td>
+            <td>0 – 2</td>
+            <td>Millwall</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Charlton Athletic</td>
+            <td>1 – 0</td>
+            <td>Sheffield United</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Oxford United</td>
+            <td>0 – 0</td>
+            <td>Bristol City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Preston North End</td>
+            <td>0 – 1</td>
+            <td>Derby County</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Southampton</td>
+            <td>1 – 2</td>
+            <td>Hull City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Stoke City</td>
+            <td>0 – 0</td>
+            <td>Queens Park Rangers</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Wrexham</td>
+            <td>1 – 2</td>
+            <td>Norwich City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Swansea City</td>
+            <td>1 – 1</td>
+            <td>Birmingham City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Charlton Athletic</td>
+            <td>1 – 2</td>
+            <td>Derby County</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Coventry City</td>
+            <td>2 – 1</td>
+            <td>Millwall</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Ipswich Town</td>
+            <td>2 – 0</td>
+            <td>Bristol City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Oxford United</td>
+            <td>0 – 0</td>
+            <td>Queens Park Rangers</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Preston North End</td>
+            <td>0 – 3</td>
+            <td>Hull City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Swansea City</td>
+            <td>3 – 1</td>
+            <td>Blackburn Rovers</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>West Bromwich Albion</td>
+            <td>0 – 5</td>
+            <td>Norwich City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Wrexham</td>
+            <td>1 – 1</td>
+            <td>Leicester City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Southampton</td>
+            <td>1 – 0</td>
+            <td>Sheffield United</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Watford</td>
+            <td>1 – 1</td>
+            <td>Portsmouth</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Stoke City</td>
+            <td>1 – 2</td>
+            <td>Middlesbrough</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Derby County</td>
+            <td>1 – 1</td>
+            <td>West Bromwich Albion</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Middlesbrough</td>
+            <td>4 – 0</td>
+            <td>Preston North End</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Millwall</td>
+            <td>4 – 0</td>
+            <td>Charlton Athletic</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Birmingham City</td>
+            <td>1 – 1</td>
+            <td>Stoke City</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Blackburn Rovers</td>
+            <td>1 – 1</td>
+            <td>Watford</td>
+            <td><span class="status status-FT">FT</span></td>
+            <td>-</td>
+        </tr>
+        
+        <tr>
+            <td>Portsmouth</td>
+            <td>–</td>
+            <td>Southampton</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>12:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Norwich City</td>
+            <td>–</td>
+            <td>Coventry City</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>8:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Bristol City</td>
+            <td>–</td>
+            <td>Derby County</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>8:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Leicester City</td>
+            <td>–</td>
+            <td>Charlton Athletic</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>12:30pm</td>
+        </tr>
+        
+        <tr>
+            <td>Stoke City</td>
+            <td>–</td>
+            <td>Southampton</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>12:30pm</td>
+        </tr>
+        
+        <tr>
+            <td>Blackburn Rovers</td>
+            <td>–</td>
+            <td>Hull City</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Ipswich Town</td>
+            <td>–</td>
+            <td>Preston North End</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Middlesbrough</td>
+            <td>–</td>
+            <td>Norwich City</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Millwall</td>
+            <td>–</td>
+            <td>Sheffield United</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Oxford United</td>
+            <td>–</td>
+            <td>Birmingham City</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Portsmouth</td>
+            <td>–</td>
+            <td>West Bromwich Albion</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Queens Park Rangers</td>
+            <td>–</td>
+            <td>Coventry City</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        <tr>
+            <td>Watford</td>
+            <td>–</td>
+            <td>Swansea City</td>
+            <td><span class="status status-FIXTURE">FIXTURE</span></td>
+            <td>3:00pm</td>
+        </tr>
+        
+        </tbody>
+    </table>
+    
+    <p class="meta">Last updated 2026-01-25T10:06:28.120974</p>
+</body>
+</html>
