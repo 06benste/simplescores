@@ -16,6 +16,8 @@ from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parent
 SCHEDULE_FILE = ROOT / ".github" / "schedule.json"
+TEMPLATES_DIR = ROOT / "templates"
+DOCS_DIR = ROOT / "docs"
 
 LEAGUES = {
     "premier_league": {
@@ -263,6 +265,51 @@ def update_schedule_file(schedule_data: dict) -> bool:
     return True
 
 
+def render_status_page(schedule_data: dict) -> None:
+    """Render the status page showing last run times and today's schedule."""
+    from jinja2 import Environment, FileSystemLoader
+    
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    
+    # Format times for display
+    def format_time(time_tuple_or_list):
+        if not time_tuple_or_list:
+            return "N/A"
+        if isinstance(time_tuple_or_list, list):
+            hour, minute = time_tuple_or_list
+        else:
+            hour, minute = time_tuple_or_list
+        return f"{hour:02d}:{minute:02d}"
+    
+    def format_datetime(iso_string):
+        if not iso_string:
+            return "Never"
+        try:
+            dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+            return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+        except (ValueError, AttributeError):
+            return iso_string
+    
+    # Render status page
+    status_tpl = env.get_template("status.html")
+    html = status_tpl.render(
+        scheduler_last_run=format_datetime(schedule_data.get("scheduler_last_run")),
+        scraper_last_run=format_datetime(schedule_data.get("scraper_last_run")),
+        schedule_date=schedule_data.get("date", "N/A"),
+        has_games=schedule_data.get("has_games", False),
+        earliest_game=format_time(schedule_data.get("earliest_game")),
+        latest_game=format_time(schedule_data.get("latest_game")),
+        start_time=format_time(schedule_data.get("start_time")),
+        end_time=format_time(schedule_data.get("end_time")),
+        final_time=format_time(schedule_data.get("final_time")),
+        run_times=schedule_data.get("run_times", []),
+        last_updated=datetime.now(timezone.utc).isoformat(),
+    )
+    (DOCS_DIR / "status.html").write_text(html, encoding="utf-8")
+    print("Status page rendered.")
+
+
 def main() -> None:
     print("Fetching today's fixtures...")
     fixture_times = fetch_today_fixtures()
@@ -276,10 +323,22 @@ def main() -> None:
         schedule_data = calculate_schedule_times(fixture_times)
         print(f"Generated schedule with {len(schedule_data['run_times'])} run times.")
     
-    if update_schedule_file(schedule_data):
+    # Update schedule file (this adds scheduler_last_run to schedule_data)
+    schedule_changed = update_schedule_file(schedule_data)
+    if schedule_changed:
         print("Schedule file updated successfully.")
     else:
         print("No schedule update needed.")
+    
+    # Re-read schedule file to get the latest data including last run times
+    if SCHEDULE_FILE.exists():
+        try:
+            schedule_data = json.loads(SCHEDULE_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, IOError):
+            pass
+    
+    # Render status page so it's updated when schedule changes
+    render_status_page(schedule_data)
 
 
 if __name__ == "__main__":

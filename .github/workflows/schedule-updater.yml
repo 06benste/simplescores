@@ -26,7 +26,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4
+        run: pip install requests beautifulsoup4 jinja2
 
       - name: Configure git
         run: |
@@ -35,6 +35,21 @@ jobs:
 
       - name: Fetch fixtures and update schedule
         run: python schedule_scraper.py
+
+      - name: Check for status page changes
+        id: check-status
+        run: |
+          if git diff --quiet docs/status.html 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit status page if changed
+        if: steps.check-status.outputs.changed == 'true'
+        run: |
+          git add docs/status.html
+          git commit -m "Update status page" || true
 
       - name: Check for changes
         id: check-changes
