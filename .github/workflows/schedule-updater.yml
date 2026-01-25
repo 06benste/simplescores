@@ -62,7 +62,7 @@ jobs:
             if [ -f docs/status.html ]; then
               git add docs/status.html
             fi
-            git commit -m "Update scraper schedule and status page for $(date +%Y-%m-%d)" || exit 0
+            git commit -m "Update scraper schedule and status page for $(date +%Y-%m-%d) [skip ci]" || exit 0
             git push
           else
             echo "No changes to commit."

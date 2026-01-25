@@ -544,6 +544,11 @@ def git_push(commit_message: str | None = None) -> bool:
     if commit_message is None:
         commit_message = f"Update scores & tables — {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     
+    # Add [skip ci] to prevent GitHub Pages build from running
+    # This saves GitHub Actions minutes since Pages will auto-deploy anyway
+    if "[skip ci]" not in commit_message and "[ci skip]" not in commit_message:
+        commit_message = f"{commit_message} [skip ci]"
+    
     # Find git executable
     git_exe = shutil.which("git")
     if git_exe is None:
@@ -589,6 +594,33 @@ def main() -> None:
 
     print("Scraping scores...")
     scores = scrape_scores()
+    
+    # Display scraped scores
+    print("\n" + "="*60)
+    print("SCRAPED SCORES")
+    print("="*60)
+    for league_name, data in scores.items():
+        matches = data.get("matches", [])
+        if matches:
+            league_label = LEAGUE_NAMES.get(league_name, league_name)
+            print(f"\n{league_label}: {len(matches)} match(es)")
+            for match in matches:
+                team1 = match.get("team1", "")
+                team2 = match.get("team2", "")
+                score1 = match.get("score1", "")
+                score2 = match.get("score2", "")
+                status = match.get("status", "")
+                time_str = match.get("date_time", "")
+                
+                if score1 and score2:
+                    print(f"  {team1:30} {score1} - {score2} {team2:30} [{status}]")
+                elif time_str:
+                    print(f"  {team1:30} vs {team2:30} [{status}] {time_str}")
+                else:
+                    print(f"  {team1:30} vs {team2:30} [{status}]")
+        elif data.get("error"):
+            print(f"\n{LEAGUE_NAMES.get(league_name, league_name)}: Error - {data.get('error')}")
+    print("="*60 + "\n")
     
     # Check if there are any matches today - exit early if none found to save GitHub Actions minutes
     total_matches = sum(len(data.get("matches", [])) for data in scores.values())
