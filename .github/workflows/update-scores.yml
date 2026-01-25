@@ -4,10 +4,10 @@ name: Update scores & tables
 
 on:
   schedule:
-    # Run every 30 minutes during typical match hours (10:00-23:59 UTC)
+    # Run every 10 minutes during typical match hours (10:00-23:59 UTC)
     # The script will check schedule.json to see if it should actually run at this time
     # This allows dynamic scheduling based on actual fixture times while minimizing wasted runs
-    - cron: '*/30 10-23 * * *'
+    - cron: '*/10 10-23 * * *'
   workflow_dispatch:
 
 permissions:
@@ -69,8 +69,8 @@ jobs:
           now = datetime.now(timezone.utc)
           current_time = (now.hour, now.minute)
           
-          # Round current minute to nearest 30 (since we run every 30 min)
-          rounded_minute = (current_time[1] // 30) * 30
+          # Round current minute to nearest 10 (since we run every 10 min)
+          rounded_minute = (current_time[1] // 10) * 10
           current_time_rounded = (current_time[0], rounded_minute)
           
           run_times = schedule.get('run_times', [])

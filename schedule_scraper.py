@@ -179,7 +179,7 @@ def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
     - start_time: (hour, minute) - 30 min before earliest game
     - end_time: (hour, minute) - 115 min after last game
     - final_time: (hour, minute) - 2.5h after last game
-    - run_times: list of (hour, minute) tuples for every 30 minutes
+    - run_times: list of (hour, minute) tuples for every 10 minutes
     
     Note: Times are in UTC (assuming UK = UTC for simplicity)
     """
@@ -207,19 +207,19 @@ def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
     final_time = datetime.combine(date.today(), datetime.min.time().replace(hour=end_hour, minute=end_min))
     final_time += timedelta(minutes=150)
     
-    # Generate run times for every 30 minutes
+    # Generate run times for every 10 minutes
     run_times = []
     current = start_time
     
-    # Round start time to nearest 30-minute mark
-    if current.minute % 30 != 0:
-        current = current.replace(minute=(current.minute // 30) * 30)
+    # Round start time to nearest 10-minute mark
+    if current.minute % 10 != 0:
+        current = current.replace(minute=(current.minute // 10) * 10)
     
     while current <= end_time:
         run_times.append((current.hour, current.minute))
-        current += timedelta(minutes=30)
+        current += timedelta(minutes=10)
     
-    # Add final update if it's more than 30 minutes after the last scheduled run
+    # Add final update if it's more than 10 minutes after the last scheduled run
     if final_time > end_time:
         run_times.append((final_time.hour, final_time.minute))
     
