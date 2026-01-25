@@ -41,8 +41,19 @@ jobs:
           python -c "
           import json
           import sys
+          import os
           from datetime import datetime, timezone, date
           from pathlib import Path
+          
+          # Check if this is a manual workflow_dispatch trigger
+          # GITHUB_EVENT_NAME will be 'workflow_dispatch' for manual runs
+          github_event = os.environ.get('GITHUB_EVENT_NAME', '')
+          is_manual = github_event == 'workflow_dispatch'
+          
+          if is_manual:
+              print('⚠ Manual workflow trigger detected - bypassing schedule checks.')
+              print('Running scraper regardless of schedule.')
+              sys.exit(0)
           
           schedule_file = Path('.github/schedule.json')
           if not schedule_file.exists():
@@ -85,20 +96,43 @@ jobs:
                   print(f'✓ Current time {current_time_rounded} matches schedule exactly. Running scraper.')
                   sys.exit(0)
               else:
-                  # Check if we're within the scheduled window
-                  earliest = min(run_times_tuples)
-                  latest = max(run_times_tuples)
+                  # Check if we're within the scheduled window using start_time and end_time
+                  # This is more accurate than using min/max of run_times
+                  start_time = schedule.get('start_time')
+                  end_time = schedule.get('end_time')
                   
-                  current_minutes = current_time_rounded[0] * 60 + current_time_rounded[1]
-                  earliest_minutes = earliest[0] * 60 + earliest[1]
-                  latest_minutes = latest[0] * 60 + latest[1]
-                  
-                  if earliest_minutes <= current_minutes <= latest_minutes:
-                      print(f'✓ Current time {current_time_rounded} is within scheduled window ({earliest} to {latest}). Running scraper.')
-                      sys.exit(0)
-              
-              print(f'✗ Current time {current_time_rounded} not in scheduled window. Skipping.')
-              sys.exit(1)
+                  if start_time and end_time:
+                      # Convert to tuples if they're lists
+                      start_tuple = tuple(start_time) if isinstance(start_time, list) else start_time
+                      end_tuple = tuple(end_time) if isinstance(end_time, list) else end_time
+                      
+                      current_minutes = current_time_rounded[0] * 60 + current_time_rounded[1]
+                      start_minutes = start_tuple[0] * 60 + start_tuple[1]
+                      end_minutes = end_tuple[0] * 60 + end_tuple[1]
+                      
+                      print(f'Schedule window: {start_tuple} to {end_tuple}')
+                      
+                      if start_minutes <= current_minutes <= end_minutes:
+                          print(f'✓ Current time {current_time_rounded} is within scheduled window ({start_tuple} to {end_tuple}). Running scraper.')
+                          sys.exit(0)
+                      else:
+                          print(f'✗ Current time {current_time_rounded} is outside scheduled window ({start_tuple} to {end_tuple}). Skipping.')
+                          sys.exit(1)
+                  else:
+                      # Fallback to min/max of run_times if start/end_time not available
+                      earliest = min(run_times_tuples)
+                      latest = max(run_times_tuples)
+                      
+                      current_minutes = current_time_rounded[0] * 60 + current_time_rounded[1]
+                      earliest_minutes = earliest[0] * 60 + earliest[1]
+                      latest_minutes = latest[0] * 60 + latest[1]
+                      
+                      if earliest_minutes <= current_minutes <= latest_minutes:
+                          print(f'✓ Current time {current_time_rounded} is within scheduled window ({earliest} to {latest}). Running scraper.')
+                          sys.exit(0)
+                      else:
+                          print(f'✗ Current time {current_time_rounded} not in scheduled window ({earliest} to {latest}). Skipping.')
+                          sys.exit(1)
           else:
               # No games scheduled, but run during typical match hours as fallback
               # This ensures we catch games even if scheduler didn't find fixtures
