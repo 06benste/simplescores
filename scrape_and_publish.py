@@ -391,22 +391,68 @@ def scrape_tables() -> dict:
             tables = soup.find_all("table")
             if tables:
                 t = tables[0]
-                header = t.find("thead") or t.find("tr")
-                rows = t.find_all("tr")[1:] if header else t.find_all("tr")
-                for row in rows[:24]:
+                # Find header row to identify column positions
+                header_row = t.find("thead")
+                if header_row:
+                    header_cells = header_row.find_all(["th", "td"])
+                    # Find indices for Played and Points columns
+                    played_idx = None
+                    points_idx = None
+                    for idx, cell in enumerate(header_cells):
+                        text = cell.get_text(strip=True).lower()
+                        # Look for "played", "pl", "p" columns
+                        if "played" in text or text == "pl" or (text == "p" and played_idx is None):
+                            played_idx = idx
+                        # Look for "points", "pts" columns
+                        if "points" in text or text == "pts":
+                            points_idx = idx
+                
+                # Get data rows
+                rows = t.find_all("tr")
+                data_rows = rows[1:] if header_row else rows
+                
+                for row in data_rows[:24]:
                     cells = row.find_all(["td", "th"])
                     if len(cells) < 3:
                         continue
+                    
                     pos = cells[0].get_text(strip=True)
                     team = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-                    played = points = ""
-                    nums = [c.get_text(strip=True) for c in cells if c.get_text(strip=True).isdigit()]
-                    if len(nums) >= 2:
-                        played, points = nums[-2], nums[-1]
+                    
+                    # Extract played and points using column indices if found
+                    played = ""
+                    points = ""
+                    
+                    if played_idx is not None and points_idx is not None:
+                        # Use identified column indices
+                        if played_idx < len(cells):
+                            played = cells[played_idx].get_text(strip=True)
+                        if points_idx < len(cells):
+                            points = cells[points_idx].get_text(strip=True)
+                    else:
+                        # Fallback: try to find by position
+                        # Typically: Pos, Team, Pl, W, D, L, F, A, GD, Pts
+                        # So index 2 should be Played, last should be Points
+                        if len(cells) >= 3:
+                            played = cells[2].get_text(strip=True)
+                        if len(cells) >= 10:
+                            points = cells[9].get_text(strip=True)
+                        elif len(cells) >= 4:
+                            # If fewer columns, points might be last
+                            points = cells[-1].get_text(strip=True)
+                    
+                    # Validate: played and points should be numeric
+                    if not played.isdigit():
+                        played = ""
+                    if not points.isdigit():
+                        points = ""
+                    
                     table_data.append({"position": pos, "team": team, "played": played, "points": points})
             out[league_name] = {"table": table_data, "last_updated": datetime.now().isoformat()}
         except Exception as e:
             print(f"Error scraping {league_name} table: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
             out[league_name] = {"table": [], "last_updated": datetime.now().isoformat(), "error": str(e)}
     return out
 
