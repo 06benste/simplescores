@@ -1,621 +1,606 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>League One Scores</title>
-    <style>
-        body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
-        a { color: #58a6ff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        h1 { margin-bottom: 20px; font-weight: 600; }
-        table { border-collapse: collapse; width: 100%; border: 1px solid #30363d; border-radius: 6px; overflow: hidden; }
-        th, td { border: 1px solid #30363d; padding: 10px 12px; text-align: left; }
-        th { background: #161b22; color: #8b949e; font-weight: 500; }
-        tr:nth-child(even) { background: #161b22; }
-        .status { font-size: 0.9rem; }
-        .status-LIVE { color: #3fb950; }
-        .status-HT { color: #d29922; }
-        .status-FIXTURE { color: #58a6ff; }
-        .meta { margin-top: 20px; font-size: 0.85rem; color: #8b949e; }
-        .error { color: #f85149; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>League One Scores</title>
+<style>body{background:#0d1117;color:#e6edf3;font-family:system-ui,sans-serif;padding:24px;max-width:720px;margin:0 auto}a{color:#58a6ff;text-decoration:none}a:hover{text-decoration:underline}h1{margin-bottom:20px;font-weight:600}table{border-collapse:collapse;width:100%;border:1px solid #30363d;border-radius:6px;overflow:hidden}th,td{border:1px solid #30363d;padding:10px 12px;text-align:left}th{background:#161b22;color:#8b949e;font-weight:500}tr:nth-child(even){background:#161b22}.status{font-size:0.9rem}.status-LIVE{color:#3fb950}.status-HT{color:#d29922}.status-FIXTURE{color:#58a6ff}.meta{margin-top:20px;font-size:0.85rem;color:#8b949e}.error{color:#f85149}</style>
 </head>
 <body>
-    <p><a href="index.html">← Back</a></p>
-    <h1>League One Scores</h1>
-    
-    <table>
-        <thead><tr><th>Team 1</th><th>Score</th><th>Team 2</th><th>Status</th><th>Time</th></tr></thead>
-        <tbody>
-        
-        <tr>
-            <td>Doncaster Rovers</td>
-            <td>1 – 1</td>
-            <td>Bolton Wanderers</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Exeter City</td>
-            <td>1 – 0</td>
-            <td>Luton Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Leyton Orient</td>
-            <td>1 – 3</td>
-            <td>AFC Wimbledon</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Lincoln City</td>
-            <td>1 – 1</td>
-            <td>Huddersfield Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Mansfield Town</td>
-            <td>3 – 0</td>
-            <td>Bradford City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Northampton Town</td>
-            <td>0 – 0</td>
-            <td>Stockport County</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Port Vale</td>
-            <td>5 – 1</td>
-            <td>Blackpool</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Reading</td>
-            <td>2 – 0</td>
-            <td>Burton Albion</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Rotherham United</td>
-            <td>0 – 2</td>
-            <td>Peterborough United</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Stevenage</td>
-            <td>1 – 1</td>
-            <td>Plymouth Argyle</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Wigan Athletic</td>
-            <td>1 – 1</td>
-            <td>Barnsley</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Wycombe Wanderers</td>
-            <td>1 – 1</td>
-            <td>Cardiff City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Bolton Wanderers</td>
-            <td>0 – 0</td>
-            <td>Northampton Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Lincoln City</td>
-            <td>5 – 2</td>
-            <td>Peterborough United</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Blackpool</td>
-            <td>1 – 2</td>
-            <td>Bradford City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Cardiff City</td>
-            <td>1 – 0</td>
-            <td>Wigan Athletic</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Huddersfield Town</td>
-            <td>2 – 2</td>
-            <td>Exeter City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Plymouth Argyle</td>
-            <td>3 – 0</td>
-            <td>Burton Albion</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Reading</td>
-            <td>1 – 0</td>
-            <td>Stockport County</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Wycombe Wanderers</td>
-            <td>2 – 0</td>
-            <td>AFC Wimbledon</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Luton Town</td>
-            <td>2 – 1</td>
-            <td>Stevenage</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Stockport County</td>
-            <td>1 – 0</td>
-            <td>Huddersfield Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Leyton Orient</td>
-            <td>1 – 1</td>
-            <td>Cardiff City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Peterborough United</td>
-            <td>3 – 1</td>
-            <td>Bolton Wanderers</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Bradford City</td>
-            <td>1 – 2</td>
-            <td>Cardiff City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Wigan Athletic</td>
-            <td>0 – 1</td>
-            <td>Bolton Wanderers</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>AFC Wimbledon</td>
-            <td>0 – 1</td>
-            <td>Doncaster Rovers</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Barnsley</td>
-            <td>2 – 1</td>
-            <td>Blackpool</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Burton Albion</td>
-            <td>3 – 1</td>
-            <td>Huddersfield Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Exeter City</td>
-            <td>3 – 0</td>
-            <td>Stevenage</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Leyton Orient</td>
-            <td>3 – 1</td>
-            <td>Reading</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Luton Town</td>
-            <td>2 – 2</td>
-            <td>Lincoln City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Mansfield Town</td>
-            <td>3 – 0</td>
-            <td>Port Vale</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Northampton Town</td>
-            <td>1 – 2</td>
-            <td>Wycombe Wanderers</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Peterborough United</td>
-            <td>0 – 1</td>
-            <td>Plymouth Argyle</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Stockport County</td>
-            <td>3 – 2</td>
-            <td>Rotherham United</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Stevenage</td>
-            <td>0 – 0</td>
-            <td>Bolton Wanderers</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Lincoln City</td>
-            <td>2 – 1</td>
-            <td>Burton Albion</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Cardiff City</td>
-            <td>1 – 1</td>
-            <td>Stockport County</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Huddersfield Town</td>
-            <td>1 – 0</td>
-            <td>Bradford City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Plymouth Argyle</td>
-            <td>1 – 0</td>
-            <td>Luton Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Blackpool</td>
-            <td>2 – 0</td>
-            <td>Northampton Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Bolton Wanderers</td>
-            <td>2 – 1</td>
-            <td>Leyton Orient</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Doncaster Rovers</td>
-            <td>3 – 3</td>
-            <td>Wigan Athletic</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Port Vale</td>
-            <td>1 – 3</td>
-            <td>Exeter City</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Reading</td>
-            <td>2 – 2</td>
-            <td>Barnsley</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Rotherham United</td>
-            <td>1 – 1</td>
-            <td>AFC Wimbledon</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Stevenage</td>
-            <td>1 – 1</td>
-            <td>Mansfield Town</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Wycombe Wanderers</td>
-            <td>0 – 2</td>
-            <td>Peterborough United</td>
-            <td><span class="status status-FT">FT</span></td>
-            <td>-</td>
-        </tr>
-        
-        <tr>
-            <td>Blackpool</td>
-            <td>–</td>
-            <td>Stockport County</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Bolton Wanderers</td>
-            <td>–</td>
-            <td>Burton Albion</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Cardiff City</td>
-            <td>–</td>
-            <td>Barnsley</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Huddersfield Town</td>
-            <td>–</td>
-            <td>Luton Town</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Lincoln City</td>
-            <td>–</td>
-            <td>Bradford City</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Plymouth Argyle</td>
-            <td>–</td>
-            <td>Mansfield Town</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Port Vale</td>
-            <td>–</td>
-            <td>AFC Wimbledon</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Rotherham United</td>
-            <td>–</td>
-            <td>Northampton Town</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Stevenage</td>
-            <td>–</td>
-            <td>Peterborough United</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Wycombe Wanderers</td>
-            <td>–</td>
-            <td>Wigan Athletic</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>7:45pm</td>
-        </tr>
-        
-        <tr>
-            <td>Doncaster Rovers</td>
-            <td>–</td>
-            <td>Leyton Orient</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>8:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Reading</td>
-            <td>–</td>
-            <td>Exeter City</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>8:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>AFC Wimbledon</td>
-            <td>–</td>
-            <td>Bolton Wanderers</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>12:30pm</td>
-        </tr>
-        
-        <tr>
-            <td>Bradford City</td>
-            <td>–</td>
-            <td>Doncaster Rovers</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>12:30pm</td>
-        </tr>
-        
-        <tr>
-            <td>Northampton Town</td>
-            <td>–</td>
-            <td>Reading</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>2:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Barnsley</td>
-            <td>–</td>
-            <td>Stevenage</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Burton Albion</td>
-            <td>–</td>
-            <td>Cardiff City</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Exeter City</td>
-            <td>–</td>
-            <td>Rotherham United</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Leyton Orient</td>
-            <td>–</td>
-            <td>Port Vale</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Luton Town</td>
-            <td>–</td>
-            <td>Blackpool</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Mansfield Town</td>
-            <td>–</td>
-            <td>Wycombe Wanderers</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Peterborough United</td>
-            <td>–</td>
-            <td>Huddersfield Town</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Stockport County</td>
-            <td>–</td>
-            <td>Plymouth Argyle</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        <tr>
-            <td>Wigan Athletic</td>
-            <td>–</td>
-            <td>Lincoln City</td>
-            <td><span class="status status-FIXTURE">FIXTURE</span></td>
-            <td>3:00pm</td>
-        </tr>
-        
-        </tbody>
-    </table>
-    
-    <p class="meta">Last updated 2026-01-25T10:07:55.281749</p>
+<p><a href="index.html">← Back</a></p>
+<h1>League One Scores</h1>
+
+<table>
+<thead><tr><th>Team 1</th><th>Score</th><th>Team 2</th><th>Status</th><th>Time</th></tr></thead>
+<tbody>
+
+<tr>
+<td>Doncaster Rovers</td>
+<td>1 – 1</td>
+<td>Bolton Wanderers</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Exeter City</td>
+<td>1 – 0</td>
+<td>Luton Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Leyton Orient</td>
+<td>1 – 3</td>
+<td>AFC Wimbledon</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Lincoln City</td>
+<td>1 – 1</td>
+<td>Huddersfield Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Mansfield Town</td>
+<td>3 – 0</td>
+<td>Bradford City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Northampton Town</td>
+<td>0 – 0</td>
+<td>Stockport County</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Port Vale</td>
+<td>5 – 1</td>
+<td>Blackpool</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Reading</td>
+<td>2 – 0</td>
+<td>Burton Albion</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Rotherham United</td>
+<td>0 – 2</td>
+<td>Peterborough United</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Stevenage</td>
+<td>1 – 1</td>
+<td>Plymouth Argyle</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Wigan Athletic</td>
+<td>1 – 1</td>
+<td>Barnsley</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Wycombe Wanderers</td>
+<td>1 – 1</td>
+<td>Cardiff City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Bolton Wanderers</td>
+<td>0 – 0</td>
+<td>Northampton Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Lincoln City</td>
+<td>5 – 2</td>
+<td>Peterborough United</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Blackpool</td>
+<td>1 – 2</td>
+<td>Bradford City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Cardiff City</td>
+<td>1 – 0</td>
+<td>Wigan Athletic</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Huddersfield Town</td>
+<td>2 – 2</td>
+<td>Exeter City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Plymouth Argyle</td>
+<td>3 – 0</td>
+<td>Burton Albion</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Reading</td>
+<td>1 – 0</td>
+<td>Stockport County</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Wycombe Wanderers</td>
+<td>2 – 0</td>
+<td>AFC Wimbledon</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Luton Town</td>
+<td>2 – 1</td>
+<td>Stevenage</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Stockport County</td>
+<td>1 – 0</td>
+<td>Huddersfield Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Leyton Orient</td>
+<td>1 – 1</td>
+<td>Cardiff City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Peterborough United</td>
+<td>3 – 1</td>
+<td>Bolton Wanderers</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Bradford City</td>
+<td>1 – 2</td>
+<td>Cardiff City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Wigan Athletic</td>
+<td>0 – 1</td>
+<td>Bolton Wanderers</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>AFC Wimbledon</td>
+<td>0 – 1</td>
+<td>Doncaster Rovers</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Barnsley</td>
+<td>2 – 1</td>
+<td>Blackpool</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Burton Albion</td>
+<td>3 – 1</td>
+<td>Huddersfield Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Exeter City</td>
+<td>3 – 0</td>
+<td>Stevenage</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Leyton Orient</td>
+<td>3 – 1</td>
+<td>Reading</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Luton Town</td>
+<td>2 – 2</td>
+<td>Lincoln City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Mansfield Town</td>
+<td>3 – 0</td>
+<td>Port Vale</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Northampton Town</td>
+<td>1 – 2</td>
+<td>Wycombe Wanderers</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Peterborough United</td>
+<td>0 – 1</td>
+<td>Plymouth Argyle</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Stockport County</td>
+<td>3 – 2</td>
+<td>Rotherham United</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Stevenage</td>
+<td>0 – 0</td>
+<td>Bolton Wanderers</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Lincoln City</td>
+<td>2 – 1</td>
+<td>Burton Albion</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Cardiff City</td>
+<td>1 – 1</td>
+<td>Stockport County</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Huddersfield Town</td>
+<td>1 – 0</td>
+<td>Bradford City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Plymouth Argyle</td>
+<td>1 – 0</td>
+<td>Luton Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Blackpool</td>
+<td>2 – 0</td>
+<td>Northampton Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Bolton Wanderers</td>
+<td>2 – 1</td>
+<td>Leyton Orient</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Doncaster Rovers</td>
+<td>3 – 3</td>
+<td>Wigan Athletic</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Port Vale</td>
+<td>1 – 3</td>
+<td>Exeter City</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Reading</td>
+<td>2 – 2</td>
+<td>Barnsley</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Rotherham United</td>
+<td>1 – 1</td>
+<td>AFC Wimbledon</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Stevenage</td>
+<td>1 – 1</td>
+<td>Mansfield Town</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Wycombe Wanderers</td>
+<td>0 – 2</td>
+<td>Peterborough United</td>
+<td><span class="status status-FT">FT</span></td>
+<td>-</td>
+</tr>
+
+<tr>
+<td>Blackpool</td>
+<td>–</td>
+<td>Stockport County</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Bolton Wanderers</td>
+<td>–</td>
+<td>Burton Albion</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Cardiff City</td>
+<td>–</td>
+<td>Barnsley</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Huddersfield Town</td>
+<td>–</td>
+<td>Luton Town</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Lincoln City</td>
+<td>–</td>
+<td>Bradford City</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Plymouth Argyle</td>
+<td>–</td>
+<td>Mansfield Town</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Port Vale</td>
+<td>–</td>
+<td>AFC Wimbledon</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Rotherham United</td>
+<td>–</td>
+<td>Northampton Town</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Stevenage</td>
+<td>–</td>
+<td>Peterborough United</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Wycombe Wanderers</td>
+<td>–</td>
+<td>Wigan Athletic</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>7:45pm</td>
+</tr>
+
+<tr>
+<td>Doncaster Rovers</td>
+<td>–</td>
+<td>Leyton Orient</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>8:00pm</td>
+</tr>
+
+<tr>
+<td>Reading</td>
+<td>–</td>
+<td>Exeter City</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>8:00pm</td>
+</tr>
+
+<tr>
+<td>AFC Wimbledon</td>
+<td>–</td>
+<td>Bolton Wanderers</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>12:30pm</td>
+</tr>
+
+<tr>
+<td>Bradford City</td>
+<td>–</td>
+<td>Doncaster Rovers</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>12:30pm</td>
+</tr>
+
+<tr>
+<td>Northampton Town</td>
+<td>–</td>
+<td>Reading</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>2:00pm</td>
+</tr>
+
+<tr>
+<td>Barnsley</td>
+<td>–</td>
+<td>Stevenage</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Burton Albion</td>
+<td>–</td>
+<td>Cardiff City</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Exeter City</td>
+<td>–</td>
+<td>Rotherham United</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Leyton Orient</td>
+<td>–</td>
+<td>Port Vale</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Luton Town</td>
+<td>–</td>
+<td>Blackpool</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Mansfield Town</td>
+<td>–</td>
+<td>Wycombe Wanderers</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Peterborough United</td>
+<td>–</td>
+<td>Huddersfield Town</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Stockport County</td>
+<td>–</td>
+<td>Plymouth Argyle</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+<tr>
+<td>Wigan Athletic</td>
+<td>–</td>
+<td>Lincoln City</td>
+<td><span class="status status-FIXTURE">FIXTURE</span></td>
+<td>3:00pm</td>
+</tr>
+
+</tbody>
+</table>
+
+<p class="meta">Last updated 2026-01-25T10:19:10.902937</p>
 </body>
 </html>
