@@ -393,21 +393,31 @@ def scrape_tables() -> dict:
                 t = tables[0]
                 # Find header row to identify column positions
                 header_row = t.find("thead")
+                header_cells = []
                 if header_row:
                     header_cells = header_row.find_all(["th", "td"])
-                    # Find indices for Played and Points columns
-                    played_idx = None
-                    points_idx = None
-                    for idx, cell in enumerate(header_cells):
-                        text = cell.get_text(strip=True).lower()
-                        # Look for "played", "pl", "p" columns
-                        if "played" in text or text == "pl" or (text == "p" and played_idx is None):
-                            played_idx = idx
-                        # Look for "points", "pts" columns
-                        if "points" in text or text == "pts":
-                            points_idx = idx
                 
-                # Get data rows
+                # Find indices for Played and Points columns by searching header text
+                played_idx = None
+                points_idx = None
+                
+                for idx, cell in enumerate(header_cells):
+                    text = cell.get_text(strip=True).lower()
+                    # Look for "played" or "pl" (but not just "p" as that could be position)
+                    if "played" in text or text == "pl":
+                        played_idx = idx
+                    # Look for "points" or "pts"
+                    if "points" in text or text == "pts":
+                        points_idx = idx
+                
+                # If not found in header, try common positions
+                # Sky Sports table structure: Pos, Team, Pl, W, D, L, F, A, GD, Pts
+                if played_idx is None:
+                    played_idx = 2  # Usually 3rd column (0-indexed: 2)
+                if points_idx is None:
+                    points_idx = -1  # Usually last column
+                
+                # Get data rows (skip header)
                 rows = t.find_all("tr")
                 data_rows = rows[1:] if header_row else rows
                 
@@ -417,35 +427,69 @@ def scrape_tables() -> dict:
                         continue
                     
                     pos = cells[0].get_text(strip=True)
-                    team = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-                    
-                    # Extract played and points using column indices if found
-                    played = ""
-                    points = ""
-                    
-                    if played_idx is not None and points_idx is not None:
-                        # Use identified column indices
-                        if played_idx < len(cells):
-                            played = cells[played_idx].get_text(strip=True)
-                        if points_idx < len(cells):
-                            points = cells[points_idx].get_text(strip=True)
+                    # Team name might be in a link or have an image, get all text from cell
+                    team_cell = cells[1] if len(cells) > 1 else None
+                    if team_cell:
+                        # Get text, but skip image alt text if present
+                        team = team_cell.get_text(strip=True)
+                        # Remove common prefixes/suffixes that might be from images
+                        team = re.sub(r'^\d+\s*', '', team)  # Remove leading numbers
                     else:
-                        # Fallback: try to find by position
-                        # Typically: Pos, Team, Pl, W, D, L, F, A, GD, Pts
-                        # So index 2 should be Played, last should be Points
-                        if len(cells) >= 3:
-                            played = cells[2].get_text(strip=True)
-                        if len(cells) >= 10:
-                            points = cells[9].get_text(strip=True)
-                        elif len(cells) >= 4:
-                            # If fewer columns, points might be last
-                            points = cells[-1].get_text(strip=True)
+                        team = ""
                     
-                    # Validate: played and points should be numeric
-                    if not played.isdigit():
-                        played = ""
-                    if not points.isdigit():
-                        points = ""
+                    # Extract all numeric values from cells (skip position and team)
+                    # This helps us find the right columns even if structure varies
+                    numeric_values = []
+                    for idx, cell in enumerate(cells[2:], start=2):  # Skip pos (0) and team (1)
+                        text = cell.get_text(strip=True)
+                        # Handle goal difference which might have + or -
+                        if text and (text.isdigit() or (text.startswith(('+', '-')) and text[1:].isdigit())):
+                            if text.isdigit():
+                                numeric_values.append((idx, int(text)))
+                            else:
+                                # Goal difference - skip for now
+                                pass
+                    
+                    # Find played: should be first reasonable number (0-38) after team
+                    played = ""
+                    for idx, value in numeric_values:
+                        if 0 <= value <= 38:  # Valid games played range
+                            played = str(value)
+                            break
+                    
+                    # Find points: should be last reasonable number (0-114) in the row
+                    points = ""
+                    # Try from the end backwards
+                    for idx, value in reversed(numeric_values):
+                        if 0 <= value <= 114:  # Valid points range (max 38*3)
+                            points = str(value)
+                            break
+                    
+                    # Fallback: if we didn't find using heuristics, use column indices
+                    if not played and played_idx is not None:
+                        idx = played_idx if played_idx >= 0 else len(cells) + played_idx
+                        if 0 <= idx < len(cells):
+                            candidate = cells[idx].get_text(strip=True)
+                            if candidate.isdigit() and 0 <= int(candidate) <= 38:
+                                played = candidate
+                    
+                    if not points and points_idx is not None:
+                        idx = points_idx if points_idx >= 0 else len(cells) + points_idx
+                        if 0 <= idx < len(cells):
+                            candidate = cells[idx].get_text(strip=True)
+                            if candidate.isdigit() and 0 <= int(candidate) <= 114:
+                                points = candidate
+                    
+                    # Final fallback: use standard positions
+                    if not played and len(cells) > 2:
+                        candidate = cells[2].get_text(strip=True)
+                        if candidate.isdigit() and 0 <= int(candidate) <= 38:
+                            played = candidate
+                    
+                    if not points:
+                        candidate = cells[-1].get_text(strip=True)
+                        if candidate.isdigit() and 0 <= int(candidate) <= 114:
+                            points = candidate
                     
                     table_data.append({"position": pos, "team": team, "played": played, "points": points})
             out[league_name] = {"table": table_data, "last_updated": datetime.now().isoformat()}
