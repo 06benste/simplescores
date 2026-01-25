@@ -520,6 +520,14 @@ def main() -> None:
 
     print("Scraping scores...")
     scores = scrape_scores()
+    
+    # Check if there are any matches today - exit early if none found to save GitHub Actions minutes
+    total_matches = sum(len(data.get("matches", [])) for data in scores.values())
+    if total_matches == 0:
+        print("No matches found for today. Exiting early to save GitHub Actions minutes.")
+        return
+    
+    print(f"Found {total_matches} matches across all leagues.")
     print("Scraping tables...")
     tables = scrape_tables()
     print("Rendering HTML...")
