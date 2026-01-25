@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import requests
@@ -466,6 +466,75 @@ def render_html(scores: dict, tables: dict) -> None:
         (DOCS_DIR / f"{key}_table.html").write_text(html, encoding="utf-8")
 
 
+def render_status_page() -> None:
+    """Render the status page showing last run times and today's schedule."""
+    import json
+    
+    ensure_docs()
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    
+    # Read schedule file
+    schedule_file = ROOT / ".github" / "schedule.json"
+    schedule_data = {}
+    if schedule_file.exists():
+        try:
+            schedule_data = json.loads(schedule_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, IOError):
+            pass
+    
+    # Format times for display
+    def format_time(time_tuple_or_list):
+        if not time_tuple_or_list:
+            return "N/A"
+        if isinstance(time_tuple_or_list, list):
+            hour, minute = time_tuple_or_list
+        else:
+            hour, minute = time_tuple_or_list
+        return f"{hour:02d}:{minute:02d}"
+    
+    def format_datetime(iso_string):
+        if not iso_string:
+            return "Never"
+        try:
+            dt = datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
+            return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+        except (ValueError, AttributeError):
+            return iso_string
+    
+    # Render status page
+    status_tpl = env.get_template("status.html")
+    html = status_tpl.render(
+        scheduler_last_run=format_datetime(schedule_data.get("scheduler_last_run")),
+        scraper_last_run=format_datetime(schedule_data.get("scraper_last_run")),
+        schedule_date=schedule_data.get("date", "N/A"),
+        has_games=schedule_data.get("has_games", False),
+        earliest_game=format_time(schedule_data.get("earliest_game")),
+        latest_game=format_time(schedule_data.get("latest_game")),
+        start_time=format_time(schedule_data.get("start_time")),
+        end_time=format_time(schedule_data.get("end_time")),
+        final_time=format_time(schedule_data.get("final_time")),
+        run_times=schedule_data.get("run_times", []),
+        last_updated=datetime.now(timezone.utc).isoformat(),
+    )
+    (DOCS_DIR / "status.html").write_text(html, encoding="utf-8")
+
+
+def update_scraper_last_run() -> None:
+    """Update the schedule.json file with the scraper's last run time."""
+    import json
+    
+    schedule_file = ROOT / ".github" / "schedule.json"
+    schedule_data = {}
+    if schedule_file.exists():
+        try:
+            schedule_data = json.loads(schedule_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, IOError):
+            pass
+    
+    schedule_data["scraper_last_run"] = datetime.now(timezone.utc).isoformat()
+    schedule_file.write_text(json.dumps(schedule_data, indent=2), encoding="utf-8")
+
+
 # -----------------------------------------------------------------------------
 # Git push
 # -----------------------------------------------------------------------------
@@ -532,6 +601,10 @@ def main() -> None:
     tables = scrape_tables()
     print("Rendering HTML...")
     render_html(scores, tables)
+    
+    # Update scraper last run time and render status page
+    update_scraper_last_run()
+    render_status_page()
 
     if args.no_push:
         print("Skipping git push (--no-push).")

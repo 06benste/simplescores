@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -246,10 +246,15 @@ def update_schedule_file(schedule_data: dict) -> bool:
         except (json.JSONDecodeError, IOError):
             pass
     
+    # Add last run time for scheduler (use UTC)
+    schedule_data["scheduler_last_run"] = datetime.now(timezone.utc).isoformat()
+    
     # Check if schedule has changed
     if existing_schedule.get("date") == schedule_data.get("date") and \
        existing_schedule.get("run_times") == schedule_data.get("run_times"):
-        print("Schedule unchanged.")
+        # Still update last_run_time even if schedule unchanged
+        SCHEDULE_FILE.write_text(json.dumps(schedule_data, indent=2), encoding="utf-8")
+        print("Schedule unchanged, but updated last run time.")
         return False
     
     # Write new schedule
