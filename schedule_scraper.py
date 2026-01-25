@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 
 ROOT = Path(__file__).resolve().parent
-WORKFLOW_FILE = ROOT / ".github" / "workflows" / "update-scores.yml"
+SCHEDULE_FILE = ROOT / ".github" / "schedule.json"
 
 LEAGUES = {
     "premier_league": {
@@ -170,22 +170,24 @@ def fetch_today_fixtures() -> list[tuple[int, int]]:
     return fixture_times
 
 
-def calculate_cron_schedule(fixture_times: list[tuple[int, int]]) -> list[str]:
-    """Calculate cron schedule based on fixture times.
+def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
+    """Calculate schedule times based on fixture times.
     
-    Schedule:
-    - Start 30 min before earliest game
-    - Run every 30 minutes during games
-    - End 115 minutes after last game starts
-    - Final update 2.5 hours (150 minutes) after last game starts
+    Returns a dict with:
+    - start_time: (hour, minute) - 30 min before earliest game
+    - end_time: (hour, minute) - 115 min after last game
+    - final_time: (hour, minute) - 2.5h after last game
+    - run_times: list of (hour, minute) tuples for every 30 minutes
     
-    Note: Times are assumed to be in UK time. We need to convert to UTC.
-    UK is UTC+0 (GMT) or UTC+1 (BST). For simplicity, assuming UTC+0.
+    Note: Times are in UTC (assuming UK = UTC for simplicity)
     """
     if not fixture_times:
-        return []
+        return {
+            "has_games": False,
+            "run_times": []
+        }
     
-    # Find earliest and latest game times (in UK time)
+    # Find earliest and latest game times (in UK time, treated as UTC)
     earliest = min(fixture_times)
     latest = max(fixture_times)
     
@@ -203,9 +205,8 @@ def calculate_cron_schedule(fixture_times: list[tuple[int, int]]) -> list[str]:
     final_time = datetime.combine(date.today(), datetime.min.time().replace(hour=end_hour, minute=end_min))
     final_time += timedelta(minutes=150)
     
-    # Generate cron entries for every 30 minutes
-    # Note: GitHub Actions uses UTC, so we use times as-is (assuming UK = UTC for now)
-    cron_entries = []
+    # Generate run times for every 30 minutes
+    run_times = []
     current = start_time
     
     # Round start time to nearest 30-minute mark
@@ -213,47 +214,47 @@ def calculate_cron_schedule(fixture_times: list[tuple[int, int]]) -> list[str]:
         current = current.replace(minute=(current.minute // 30) * 30)
     
     while current <= end_time:
-        cron_entries.append(f"    - cron: '{current.minute} {current.hour} * * *'")
+        run_times.append((current.hour, current.minute))
         current += timedelta(minutes=30)
     
     # Add final update if it's more than 30 minutes after the last scheduled run
     if final_time > end_time:
-        cron_entries.append(f"    - cron: '{final_time.minute} {final_time.hour} * * *'")
+        run_times.append((final_time.hour, final_time.minute))
     
-    return cron_entries
+    return {
+        "has_games": True,
+        "date": date.today().isoformat(),
+        "earliest_game": earliest,
+        "latest_game": latest,
+        "start_time": (start_time.hour, start_time.minute),
+        "end_time": (end_time.hour, end_time.minute),
+        "final_time": (final_time.hour, final_time.minute),
+        "run_times": run_times
+    }
 
 
-def update_workflow_schedule(cron_entries: list[str]) -> bool:
-    """Update the workflow file with new cron schedule."""
-    if not WORKFLOW_FILE.exists():
-        print(f"Workflow file not found: {WORKFLOW_FILE}", file=__import__("sys").stderr)
+def update_schedule_file(schedule_data: dict) -> bool:
+    """Update the schedule JSON file with today's schedule."""
+    # Ensure .github directory exists
+    SCHEDULE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Read existing schedule if it exists
+    existing_schedule = {}
+    if SCHEDULE_FILE.exists():
+        try:
+            existing_schedule = json.loads(SCHEDULE_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, IOError):
+            pass
+    
+    # Check if schedule has changed
+    if existing_schedule.get("date") == schedule_data.get("date") and \
+       existing_schedule.get("run_times") == schedule_data.get("run_times"):
+        print("Schedule unchanged.")
         return False
     
-    content = WORKFLOW_FILE.read_text(encoding="utf-8")
-    
-    # Find the schedule section and replace it
-    # Pattern: match from "schedule:" through all cron entries until "workflow_dispatch:"
-    pattern = r"(on:\s+schedule:\s+)(.*?)(\s+workflow_dispatch:)"
-    
-    if cron_entries:
-        # Add comment and cron entries
-        new_schedule = "    # Auto-updated by schedule-updater workflow\n"
-        new_schedule += "    # Schedule based on today's fixtures\n"
-        new_schedule += "\n".join(cron_entries) + "\n"
-    else:
-        # No games today - use a minimal schedule that won't run
-        new_schedule = "    # Auto-updated by schedule-updater workflow\n"
-        new_schedule += "    # No games scheduled today\n"
-        new_schedule += "    - cron: '0 2 * * *'  # Placeholder - won't trigger scraper\n"
-    
-    new_content = re.sub(pattern, r"\1" + new_schedule + r"\3", content, flags=re.DOTALL)
-    
-    if new_content == content:
-        print("No changes needed to workflow file.")
-        return False
-    
-    WORKFLOW_FILE.write_text(new_content, encoding="utf-8")
-    print(f"Updated workflow schedule with {len(cron_entries)} cron entries.")
+    # Write new schedule
+    SCHEDULE_FILE.write_text(json.dumps(schedule_data, indent=2), encoding="utf-8")
+    print(f"Updated schedule file with {len(schedule_data.get('run_times', []))} run times.")
     return True
 
 
@@ -263,19 +264,17 @@ def main() -> None:
     
     if not fixture_times:
         print("No fixtures found for today.")
-        # Update workflow to not run (or run once at 2am as placeholder)
-        cron_entries = []
+        schedule_data = {"has_games": False, "date": date.today().isoformat(), "run_times": []}
     else:
         print(f"Found {len(fixture_times)} fixtures for today.")
         print(f"Earliest: {min(fixture_times)}, Latest: {max(fixture_times)}")
-        cron_entries = calculate_cron_schedule(fixture_times)
-        print(f"Generated {len(cron_entries)} cron schedule entries.")
+        schedule_data = calculate_schedule_times(fixture_times)
+        print(f"Generated schedule with {len(schedule_data['run_times'])} run times.")
     
-    if update_workflow_schedule(cron_entries):
-        print("Workflow schedule updated successfully.")
-        print("Note: Commit and push this change for it to take effect.")
+    if update_schedule_file(schedule_data):
+        print("Schedule file updated successfully.")
     else:
-        print("No workflow update needed.")
+        print("No schedule update needed.")
 
 
 if __name__ == "__main__":

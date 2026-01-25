@@ -39,7 +39,7 @@ jobs:
       - name: Check for changes
         id: check-changes
         run: |
-          if git diff --quiet .github/workflows/update-scores.yml; then
+          if git diff --quiet .github/schedule.json; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -48,6 +48,6 @@ jobs:
       - name: Commit and push if changed
         if: steps.check-changes.outputs.changed == 'true'
         run: |
-          git add .github/workflows/update-scores.yml
+          git add .github/schedule.json
           git commit -m "Update scraper schedule for $(date +%Y-%m-%d)"
           git push

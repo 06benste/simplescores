@@ -4,11 +4,10 @@ name: Update scores & tables
 
 on:
   schedule:
-    # This schedule is auto-updated daily at 2am UTC by the schedule-updater workflow
-    # which fetches today's fixtures and sets up the appropriate cron schedule.
-    # Default fallback schedule (will be replaced):
-    - cron: '*/30 14-22 * * 0,6'
-    - cron: '*/30 18-22 * * 2,3'
+    # Run every 30 minutes during typical match hours (10:00-23:59 UTC)
+    # The script will check schedule.json to see if it should actually run at this time
+    # This allows dynamic scheduling based on actual fixture times while minimizing wasted runs
+    - cron: '*/30 10-23 * * *'
   workflow_dispatch:
 
 permissions:
@@ -37,6 +36,48 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Check schedule and run scraper
+        run: |
+          python -c "
+          import json
+          import sys
+          from datetime import datetime
+          from pathlib import Path
+          
+          schedule_file = Path('.github/schedule.json')
+          if not schedule_file.exists():
+              print('No schedule file found. Running scraper anyway.')
+              sys.exit(0)
+          
+          try:
+              schedule = json.loads(schedule_file.read_text())
+          except:
+              print('Error reading schedule file. Running scraper anyway.')
+              sys.exit(0)
+          
+          # Check if schedule is for today
+          from datetime import date
+          if schedule.get('date') != date.today().isoformat():
+              print(f'Schedule is for {schedule.get(\"date\")}, not today. Skipping.')
+              sys.exit(1)
+          
+          # Check if we should run now
+          now = datetime.utcnow()
+          current_time = (now.hour, now.minute)
+          
+          # Round current minute to nearest 30 (since we run every 30 min)
+          rounded_minute = (current_time[1] // 30) * 30
+          current_time_rounded = (current_time[0], rounded_minute)
+          
+          run_times = schedule.get('run_times', [])
+          if current_time_rounded in run_times:
+              print(f'Current time {current_time_rounded} matches schedule. Running scraper.')
+              sys.exit(0)
+          else:
+              print(f'Current time {current_time_rounded} not in schedule {run_times}. Skipping.')
+              sys.exit(1)
+          "
+      
       - name: Scrape, render HTML, and push
         run: python scrape_and_publish.py
         env:
