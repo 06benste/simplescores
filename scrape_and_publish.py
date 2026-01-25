@@ -7,6 +7,7 @@ Run from project root. Configure GitHub Pages to serve from /docs.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
 from datetime import date, datetime
@@ -316,10 +317,17 @@ def render_html(scores: dict, tables: dict) -> None:
 def git_push(commit_message: str | None = None) -> bool:
     if commit_message is None:
         commit_message = f"Update scores & tables — {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    
+    # Find git executable
+    git_exe = shutil.which("git")
+    if git_exe is None:
+        print("Error: git command not found. Please ensure Git is installed and in your PATH.", file=sys.stderr)
+        return False
+    
     try:
-        subprocess.run(["git", "add", "docs"], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run([git_exe, "add", "docs"], cwd=ROOT, check=True, capture_output=True)
         commit = subprocess.run(
-            ["git", "commit", "-m", commit_message],
+            [git_exe, "commit", "-m", commit_message],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -330,11 +338,14 @@ def git_push(commit_message: str | None = None) -> bool:
                 return True  # No changes, skip push
             print(f"Git commit error: {out}", file=sys.stderr)
             return False
-        subprocess.run(["git", "push"], cwd=ROOT, check=True, capture_output=True)
+        subprocess.run([git_exe, "push"], cwd=ROOT, check=True, capture_output=True)
         return True
     except subprocess.CalledProcessError as e:
         err = (e.stderr or e.stdout or b"").decode(errors="replace")
         print(f"Git error: {err}", file=sys.stderr)
+        return False
+    except FileNotFoundError:
+        print("Error: git command not found. Please ensure Git is installed and in your PATH.", file=sys.stderr)
         return False
 
 
