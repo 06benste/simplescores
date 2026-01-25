@@ -36,33 +36,34 @@ jobs:
       - name: Fetch fixtures and update schedule
         run: python schedule_scraper.py
 
-      - name: Check for status page changes
-        id: check-status
+      - name: Check for changes and commit
         run: |
-          if git diff --quiet docs/status.html 2>/dev/null; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+          # Check if schedule.json changed
+          if git diff --quiet .github/schedule.json 2>/dev/null; then
+            schedule_changed=false
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            schedule_changed=true
           fi
-
-      - name: Commit status page if changed
-        if: steps.check-status.outputs.changed == 'true'
-        run: |
-          git add docs/status.html
-          git commit -m "Update status page" || true
-
-      - name: Check for changes
-        id: check-changes
-        run: |
-          if git diff --quiet .github/schedule.json; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+          
+          # Check if status page exists or changed
+          if [ -f docs/status.html ]; then
+            if git diff --quiet docs/status.html 2>/dev/null; then
+              status_changed=false
+            else
+              status_changed=true
+            fi
           else
-            echo "changed=true" >> $GITHUB_OUTPUT
+            status_changed=true
           fi
-
-      - name: Commit and push if changed
-        if: steps.check-changes.outputs.changed == 'true'
-        run: |
-          git add .github/schedule.json
-          git commit -m "Update scraper schedule for $(date +%Y-%m-%d)"
-          git push
+          
+          # Commit and push if anything changed
+          if [ "$schedule_changed" = "true" ] || [ "$status_changed" = "true" ]; then
+            git add .github/schedule.json
+            if [ -f docs/status.html ]; then
+              git add docs/status.html
+            fi
+            git commit -m "Update scraper schedule and status page for $(date +%Y-%m-%d)" || exit 0
+            git push
+          else
+            echo "No changes to commit."
+          fi
