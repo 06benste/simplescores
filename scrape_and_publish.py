@@ -71,38 +71,77 @@ USER_AGENT = (
 # -----------------------------------------------------------------------------
 
 
-def _is_today_match(match: dict, match_text: str = "") -> bool:
+def _extract_date_from_context(context: str, today: date) -> bool:
+    """Check if context contains today's date indicators."""
+    context_lower = context.lower()
+    today_day = today.strftime("%A").lower()
+    today_date_str = today.strftime("%d").lstrip("0")  # "25" or "5"
+    today_month = today.strftime("%B").lower()  # "january"
+    today_month_short = today.strftime("%b").lower()  # "jan"
+    
+    # Check for today's day name
+    if today_day in context_lower:
+        # Make sure it's not part of another word
+        day_pattern = r'\b' + re.escape(today_day) + r'\b'
+        if re.search(day_pattern, context_lower):
+            return True
+    
+    # Check for today's date (e.g., "25 January", "Jan 25", "25th")
+    date_patterns = [
+        rf'\b{today_date_str}\s+{today_month}\b',
+        rf'\b{today_month_short}\s+{today_date_str}\b',
+        rf'\b{today_date_str}(?:st|nd|rd|th)?\s+{today_month}\b',
+    ]
+    for pattern in date_patterns:
+        if re.search(pattern, context_lower):
+            return True
+    
+    # Check for "today" keyword
+    if re.search(r'\btoday\b', context_lower):
+        return True
+    
+    return False
+
+
+def _is_today_match(match: dict, match_text: str = "", context: str = "") -> bool:
     # Always include live matches
     if match.get("status") in ("LIVE", "HT"):
         return True
     
     text = (match_text or match.get("text") or "").lower()
+    full_context = (context or "").lower() + " " + text
     today = date.today()
     today_day = today.strftime("%A").lower()
     day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-    # Check if text explicitly mentions a different day
+    # Check if context/text explicitly mentions a different day
     for d in day_names:
-        if d in text and d != today_day:
-            return False
+        if d != today_day:
+            # Use word boundary to avoid partial matches
+            pattern = r'\b' + re.escape(d) + r'\b'
+            if re.search(pattern, full_context):
+                return False
+    
+    # Check if we can find today's date in the context
+    has_today_date = _extract_date_from_context(full_context, today)
     
     # For fixtures, include if:
-    # 1. Today's day name is mentioned, OR
-    # 2. Has a time (assumed to be today if no other day mentioned)
+    # 1. Today's date is found in context, OR
+    # 2. Has a time and no other day is mentioned (assumed to be today)
     if match.get("status") == "FIXTURE":
-        if today_day in text:
+        if has_today_date:
             return True
         if match.get("date_time") and re.match(r"\d{1,2}:\d{2}[ap]m", match.get("date_time", "")):
+            # Only include if no other day is mentioned
             return True
-        # If no day mentioned and no time, exclude to be safe
         return False
 
-    # For finished matches, only include if today's day is mentioned
+    # For finished matches, only include if we can confirm it's today
     if match.get("status") == "FT":
-        return today_day in text
+        return has_today_date
     
-    # For other statuses (AET, etc.), only include if today's day is mentioned
-    return today_day in text
+    # For other statuses (AET, etc.), only include if today's date is found
+    return has_today_date
 
 
 def _clean_team(words: list[str], take_last: bool, max_words: int = 3) -> str:
@@ -154,9 +193,12 @@ def scrape_scores() -> dict:
                 key = f"{t1}_{s1}_{t2}_{s2}"
                 if key not in seen and t1 and t2 and len(t1) > 2 and len(t2) > 2:
                     seen.add(key)
+                    # Combine context for date checking
+                    combined_ctx = ctx + " " + hctx
                     matches.append({
                         "team1": t1, "team2": t2, "score1": s1, "score2": s2,
                         "status": status, "date_time": "", "text": f"{t1_full} {s1} - {s2} {t2_full}",
+                        "context": combined_ctx,
                     })
 
             # Completed: "Team1, score. Team2, score. Full time."
@@ -179,10 +221,18 @@ def scrape_scores() -> dict:
                     status = "AET"
                 if t1 and t2 and len(t1) > 2 and len(t2) > 2:
                     seen.add(key)
+                    # Extract context around this match
+                    match_idx = all_text.find(f"{t1_full}, {s1}")
+                    if match_idx >= 0:
+                        ctx_start = max(0, match_idx - 300)
+                        match_ctx = all_text[ctx_start:match_idx + 400].lower()
+                    else:
+                        match_ctx = ""
                     matches.append({
                         "team1": t1, "team2": t2, "score1": s1, "score2": s2,
                         "status": status, "date_time": "",
                         "text": f"{t1_full}, {s1}. {t2_full}, {s2}. {m[4]}",
+                        "context": match_ctx,
                     })
 
             # Fixtures: "Team1 vs Team2. Kick-off at 12:30pm"
@@ -197,10 +247,18 @@ def scrape_scores() -> dict:
                 key = f"{t1}_v_{t2}_{dt}"
                 if key not in seen and t1 and t2:
                     seen.add(key)
+                    # Extract context around this fixture
+                    match_idx = all_text.find(f"{t1_full} vs {t2_full}")
+                    if match_idx >= 0:
+                        ctx_start = max(0, match_idx - 300)
+                        match_ctx = all_text[ctx_start:match_idx + 400].lower()
+                    else:
+                        match_ctx = ""
                     matches.append({
                         "team1": t1, "team2": t2, "score1": "", "score2": "",
                         "status": "FIXTURE", "date_time": dt,
                         "text": f"{t1_full} vs {t2_full}. Kick-off at {dt}",
+                        "context": match_ctx,
                     })
 
             if not matches:
@@ -214,7 +272,7 @@ def scrape_scores() -> dict:
                             st = "FIXTURE"
                         matches.append({"text": t, "status": st})
 
-            today_matches = [m for m in matches if _is_today_match(m, m.get("text", ""))]
+            today_matches = [m for m in matches if _is_today_match(m, m.get("text", ""), m.get("context", ""))]
             out[league_name] = {"matches": today_matches, "last_updated": datetime.now().isoformat()}
         except Exception as e:
             print(f"Error scraping {league_name} scores: {e}", file=sys.stderr)
