@@ -60,29 +60,60 @@ jobs:
               print(f'Schedule is for {schedule.get(\"date\")}, not today. Skipping.')
               sys.exit(1)
           
-          # Check if there are any games scheduled
-          if not schedule.get('has_games', False):
-              print('No games scheduled for today. Skipping.')
-              sys.exit(1)
-          
-          # Check if we should run now
+          # Check current time
           now = datetime.now(timezone.utc)
           current_time = (now.hour, now.minute)
-          
-          # Round current minute to nearest 10 (since we run every 10 min)
           rounded_minute = (current_time[1] // 10) * 10
           current_time_rounded = (current_time[0], rounded_minute)
           
+          # Check if there are any games scheduled
+          has_games = schedule.get('has_games', False)
           run_times = schedule.get('run_times', [])
-          # Convert run_times to tuples for comparison (they're stored as lists in JSON)
           run_times_tuples = [tuple(rt) if isinstance(rt, list) else rt for rt in run_times]
           
-          if current_time_rounded in run_times_tuples:
-              print(f'Current time {current_time_rounded} matches schedule. Running scraper.')
-              sys.exit(0)
-          else:
-              print(f'Current time {current_time_rounded} not in schedule {run_times_tuples}. Skipping.')
+          print(f'Current UTC time: {now.strftime(\"%H:%M:%S\")}')
+          print(f'Rounded time (to 10 min): {current_time_rounded}')
+          print(f'Has games scheduled: {has_games}')
+          print(f'Total scheduled times: {len(run_times_tuples)}')
+          
+          if has_games and run_times_tuples:
+              # We have a specific schedule - check if we should run
+              print(f'First 5 scheduled times: {run_times_tuples[:5]}')
+              print(f'Last 5 scheduled times: {run_times_tuples[-5:]}')
+              
+              if current_time_rounded in run_times_tuples:
+                  print(f'✓ Current time {current_time_rounded} matches schedule exactly. Running scraper.')
+                  sys.exit(0)
+              else:
+                  # Check if we're within the scheduled window
+                  earliest = min(run_times_tuples)
+                  latest = max(run_times_tuples)
+                  
+                  current_minutes = current_time_rounded[0] * 60 + current_time_rounded[1]
+                  earliest_minutes = earliest[0] * 60 + earliest[1]
+                  latest_minutes = latest[0] * 60 + latest[1]
+                  
+                  if earliest_minutes <= current_minutes <= latest_minutes:
+                      print(f'✓ Current time {current_time_rounded} is within scheduled window ({earliest} to {latest}). Running scraper.')
+                      sys.exit(0)
+              
+              print(f'✗ Current time {current_time_rounded} not in scheduled window. Skipping.')
               sys.exit(1)
+          else:
+              # No games scheduled, but run during typical match hours as fallback
+              # This ensures we catch games even if scheduler didn't find fixtures
+              current_hour = current_time[0]
+              if 12 <= current_hour <= 22:  # 12:00-22:59 UTC (typical match hours)
+                  # Run every 30 minutes during fallback hours to save GitHub Actions minutes
+                  if current_time[1] in [0, 30]:
+                      print(f'⚠ No games scheduled, but running fallback check at {current_time_rounded} (typical match hours).')
+                      sys.exit(0)
+                  else:
+                      print(f'✗ No games scheduled, skipping non-30-min interval {current_time_rounded}.')
+                      sys.exit(1)
+              else:
+                  print(f'✗ No games scheduled and outside typical match hours (12:00-22:59 UTC). Skipping.')
+                  sys.exit(1)
           "
       
       - name: Scrape, render HTML, and push
