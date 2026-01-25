@@ -1,0 +1,53 @@
+# Daily scheduler that fetches fixtures and updates the scraper workflow schedule
+name: Update Scraper Schedule
+
+on:
+  schedule:
+    # Run daily at 2am UTC to set up the day's scraping schedule
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-schedule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch fixtures and update schedule
+        run: python schedule_scraper.py
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet .github/workflows/update-scores.yml; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push if changed
+        if: steps.check-changes.outputs.changed == 'true'
+        run: |
+          git add .github/workflows/update-scores.yml
+          git commit -m "Update scraper schedule for $(date +%Y-%m-%d)"
+          git push

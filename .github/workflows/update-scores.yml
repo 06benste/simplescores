@@ -4,19 +4,12 @@ name: Update scores & tables
 
 on:
   schedule:
-    # Match days only: Weekends (Sat/Sun) + Midweek match days (Tue/Wed)
-    # Weekends: 14:00-22:00 UTC (covers 2pm-10pm UK time, typical match window)
-    # ~17 runs/day × 2 days = 34 runs/weekend
+    # This schedule is auto-updated daily at 2am UTC by the schedule-updater workflow
+    # which fetches today's fixtures and sets up the appropriate cron schedule.
+    # Default fallback schedule (will be replaced):
     - cron: '*/30 14-22 * * 0,6'
-    # Midweek matches: 18:00-22:00 UTC (covers 6pm-10pm UK time)
-    # ~9 runs/day × 2 days = 18 runs/week
     - cron: '*/30 18-22 * * 2,3'
-    # Total: ~52 runs/week × 4.33 weeks = ~225 runs/month × 60s = ~225 minutes/month (well within free tier)
   workflow_dispatch:
-
-# Note: GitHub Actions cron cannot dynamically adjust based on actual game times.
-# For dynamic scheduling (start at earliest game, end 115min after last game + final update 2.5h later),
-# you would need an external scheduler or a workflow that checks game schedules and triggers accordingly.
 
 permissions:
   contents: write
