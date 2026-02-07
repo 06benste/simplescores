@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#new#!/usr/bin/env python3
 """
 Fetch today's fixtures and update the scraper workflow cron schedule.
 Runs daily at 2am to set up the day's scraping schedule.
