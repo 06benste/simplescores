@@ -71,43 +71,13 @@ def parse_time_12hr(time_str: str) -> tuple[int, int] | None:
     return (hour, minute)
 
 
-def _parse_date_header(date_text: str, today: date) -> bool:
-    """Parse date header in format 'Thursday 1st January' and check if it matches today."""
-    if not date_text:
-        return False
-    
-    date_text = date_text.strip()
-    date_lower = date_text.lower()
-    
-    # Check for "yesterday" - exclude these
-    if "yesterday" in date_lower:
-        return False
-    
-    # Parse format: "Thursday 1st January" or "Thursday 1 January"
-    today_day = today.strftime("%A").lower()
-    today_date_str = today.strftime("%d").lstrip("0")  # "25" or "5"
-    today_month = today.strftime("%B").lower()  # "january"
-    
-    # Check exact format: "DayName DayNumber[st/nd/rd/th] MonthName"
-    pattern = rf'^{re.escape(today_day)}\s+{today_date_str}(?:st|nd|rd|th)?\s+{re.escape(today_month)}$'
-    if re.match(pattern, date_lower):
-        return True
-    
-    # Also check without ordinal: "Thursday 1 January"
-    pattern_alt = rf'^{re.escape(today_day)}\s+{today_date_str}\s+{re.escape(today_month)}$'
-    if re.match(pattern_alt, date_lower):
-        return True
-    
-    return False
-
-
 def fetch_today_fixtures() -> list[tuple[int, int]]:
     """Fetch all fixture times for today across all leagues. Returns list of (hour, minute) tuples."""
     today = date.today()
     today_str = today.isoformat()
     today_str_alt = today.strftime("%d/%m/%Y")
     
-    fixture_times = []
+    fixture_times = set()  # Use set to avoid duplicates
     
     for league_name, urls in LEAGUES.items():
         try:
@@ -119,59 +89,44 @@ def fetch_today_fixtures() -> list[tuple[int, int]]:
             r.raise_for_status()
             soup = BeautifulSoup(r.content, "html.parser")
             
-            # Find all match sections
-            match_sections = soup.find_all("div", class_="fixres__body")
+            # Find all match score divs
+            match_items = soup.find_all("div", class_="ui-sport-match-score")
             
-            for match_section in match_sections:
-                # Find preceding date header
-                date_header = None
-                current = match_section.find_previous()
-                
-                while current:
-                    if current.name == "h4" and "fixres__header2" in current.get("class", []):
-                        date_header = current
-                        break
-                    if current.name == "div" and "fixres__body" in current.get("class", []):
-                        break
-                    current = current.find_previous()
-                
-                section_date = ""
-                if date_header:
-                    section_date = date_header.get_text(strip=True)
-                
-                # Only include matches from sections with today's date header
-                if not section_date:
+            for match_item in match_items:
+                data_state = match_item.get("data-state")
+                if not data_state:
                     continue
                 
-                # Check if this is today's section using the precise date header parser
-                is_today = _parse_date_header(section_date, today)
-                
-                if not is_today:
+                try:
+                    match_data = json.loads(data_state)
+                except json.JSONDecodeError:
                     continue
                 
-                # Extract match times
-                match_items = match_section.find_all("a", class_="matches__item")
+                match_date = match_data.get("start", {}).get("date", "")
+                if not match_date or match_date.lower() not in (today_str.lower(), today_str_alt.lower()):
+                    continue
                 
-                for match_item in match_items:
-                    time_span = match_item.find("span", class_="matches__date")
-                    if time_span:
-                        time_str = time_span.get_text(strip=True)
-                        if time_str == "FT":
-                            # For finished matches, try to find start time from other attributes or assume default
-                            # For now, skip or use default if needed
-                            continue
-                        parsed = parse_time_12hr(time_str) or (int(time_str.split(':')[0]), int(time_str.split(':')[1]))
-                        if parsed:
-                            fixture_times.append(parsed)
-                    else:
-                        # Try to find data attributes or other ways
+                time_12hr = match_data.get("start", {}).get("time12hr", "")
+                time_24hr = match_data.get("start", {}).get("time", "")
+                
+                parsed = None
+                if time_24hr:
+                    try:
+                        hour, minute = map(int, time_24hr.split(":"))
+                        parsed = (hour, minute)
+                    except ValueError:
                         pass
+                if not parsed and time_12hr:
+                    parsed = parse_time_12hr(time_12hr)
+                
+                if parsed:
+                    fixture_times.add(parsed)
         
         except Exception as e:
             print(f"Error fetching fixtures for {league_name}: {e}", file=__import__("sys").stderr)
             continue
     
-    return fixture_times
+    return sorted(list(fixture_times))
 
 
 def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
@@ -222,7 +177,7 @@ def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
         current += timedelta(minutes=10)
     
     # Add final update if it's more than 10 minutes after the last scheduled run
-    if final_time > end_time:
+    if final_time > end_time + timedelta(minutes=10):
         run_times.append((final_time.hour, final_time.minute))
     
     return {
