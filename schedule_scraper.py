@@ -21,21 +21,27 @@ DOCS_DIR = ROOT / "docs"
 LEAGUES = {
     "premier_league": {
         "scores_url": "https://www.skysports.com/premier-league-fixtures",
+        "results_url": "https://www.skysports.com/premier-league-results",
     },
     "championship": {
         "scores_url": "https://www.skysports.com/championship-fixtures",
+        "results_url": "https://www.skysports.com/championship-results",
     },
     "league_one": {
         "scores_url": "https://www.skysports.com/league-1-fixtures",
+        "results_url": "https://www.skysports.com/league-1-results",
     },
     "league_two": {
         "scores_url": "https://www.skysports.com/league-2-fixtures",
+        "results_url": "https://www.skysports.com/league-2-results",
     },
     "fa_cup": {
         "scores_url": "https://www.skysports.com/fa-cup-fixtures",
+        "results_url": "https://www.skysports.com/fa-cup-results",
     },
     "carabao_cup": {
         "scores_url": "https://www.skysports.com/carabao-cup-fixtures",
+        "results_url": "https://www.skysports.com/carabao-cup-results",
     },
 }
 
@@ -46,21 +52,27 @@ USER_AGENT = (
 
 
 def parse_time_12hr(time_str: str) -> tuple[int, int] | None:
-    """Parse time like '2.00pm' or '2:00pm' to (hour, minute) in 24-hour format."""
+    """Parse time like '2.00pm' or '2:00pm' or '14:00' to (hour, minute) in 24-hour format."""
     if not time_str:
         return None
     
-    # Remove dots and spaces
+    # Clean up
     time_str = time_str.replace(".", "").replace(" ", "").lower()
     
-    # Match patterns like "2:00pm", "200pm", "14:00", etc.
-    match = re.match(r"(\d{1,2}):?(\d{2})(am|pm)?", time_str)
+    # Match: 2:00pm, 200pm, 14:00, 3pm, etc.
+    match = re.match(r"(\d{1,2})(?::)?(\d{2})?(am|pm)?", time_str)
     if not match:
         return None
     
-    hour = int(match.group(1))
-    minute = int(match.group(2))
+    hour_str = match.group(1)
+    min_str = match.group(2) or "00"
     period = match.group(3) or ""
+    
+    try:
+        hour = int(hour_str)
+        minute = int(min_str)
+    except ValueError:
+        return None
     
     # Convert to 24-hour
     if period == "pm" and hour != 12:
@@ -68,63 +80,93 @@ def parse_time_12hr(time_str: str) -> tuple[int, int] | None:
     elif period == "am" and hour == 12:
         hour = 0
     
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    
     return (hour, minute)
+
+
+def parse_match_date(date_str: str) -> date | None:
+    """Parse date string like 'Sunday 8th February' to date object, assuming current year."""
+    if not date_str:
+        return None
+    
+    # Remove weekday if present
+    date_str = re.sub(r'^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s', '', date_str, flags=re.I)
+    
+    # Remove ordinal suffixes
+    date_str = re.sub(r'(\d{1,2})(st|nd|rd|th)', r'\1', date_str, flags=re.I)
+    
+    try:
+        dt = datetime.strptime(date_str.strip(), "%d %B")
+        dt = dt.replace(year=date.today().year)
+        return dt.date()
+    except ValueError:
+        try:
+            # Try other formats if needed
+            dt = datetime.strptime(date_str.strip(), "%d/%m/%Y")
+            return dt.date()
+        except ValueError:
+            return None
 
 
 def fetch_today_fixtures() -> list[tuple[int, int]]:
     """Fetch all fixture times for today across all leagues. Returns list of (hour, minute) tuples."""
     today = date.today()
-    today_str = today.isoformat()
-    today_str_alt = today.strftime("%d/%m/%Y")
     
     fixture_times = set()  # Use set to avoid duplicates
     
     for league_name, urls in LEAGUES.items():
-        try:
-            r = requests.get(
-                urls["scores_url"],
-                timeout=10,
-                headers={"User-Agent": USER_AGENT},
-            )
-            r.raise_for_status()
-            soup = BeautifulSoup(r.content, "html.parser")
-            
-            # Find all match score divs
-            match_items = soup.find_all("div", class_="ui-sport-match-score")
-            
-            for match_item in match_items:
-                data_state = match_item.get("data-state")
-                if not data_state:
-                    continue
+        for url_key in ["scores_url", "results_url"]:
+            url = urls.get(url_key)
+            if not url:
+                continue
+            try:
+                r = requests.get(
+                    url,
+                    timeout=10,
+                    headers={"User-Agent": USER_AGENT},
+                )
+                r.raise_for_status()
+                soup = BeautifulSoup(r.content, "html.parser")
                 
-                try:
-                    match_data = json.loads(data_state)
-                except json.JSONDecodeError:
-                    continue
+                # Find all match score divs
+                match_items = soup.find_all("div", class_="ui-sport-match-score")
                 
-                match_date = match_data.get("start", {}).get("date", "")
-                if not match_date or match_date.lower() not in (today_str.lower(), today_str_alt.lower()):
-                    continue
-                
-                time_12hr = match_data.get("start", {}).get("time12hr", "")
-                time_24hr = match_data.get("start", {}).get("time", "")
-                
-                parsed = None
-                if time_24hr:
+                for match_item in match_items:
+                    data_state = match_item.get("data-state")
+                    if not data_state:
+                        continue
+                    
                     try:
-                        hour, minute = map(int, time_24hr.split(":"))
-                        parsed = (hour, minute)
-                    except ValueError:
-                        pass
-                if not parsed and time_12hr:
-                    parsed = parse_time_12hr(time_12hr)
-                
-                if parsed:
-                    fixture_times.add(parsed)
-        
-        except Exception as e:
-            print(f"Error fetching fixtures for {league_name}: {e}", file=__import__("sys").stderr)
-            continue
+                        match_data = json.loads(data_state)
+                    except json.JSONDecodeError:
+                        continue
+                    
+                    match_date_str = match_data.get("start", {}).get("date", "")
+                    match_date = parse_match_date(match_date_str)
+                    if match_date != today:
+                        continue
+                    
+                    time_12hr = match_data.get("start", {}).get("time12hr", "")
+                    time_24hr = match_data.get("start", {}).get("time", "")
+                    
+                    parsed = None
+                    if time_24hr:
+                        try:
+                            hour, minute = map(int, time_24hr.split(":"))
+                            parsed = (hour, minute)
+                        except ValueError:
+                            pass
+                    if not parsed and time_12hr:
+                        parsed = parse_time_12hr(time_12hr)
+                    
+                    if parsed:
+                        fixture_times.add(parsed)
+            
+            except Exception as e:
+                print(f"Error fetching fixtures for {league_name} from {url_key}: {e}", file=__import__("sys").stderr)
+                continue
     
     return sorted(list(fixture_times))
 
