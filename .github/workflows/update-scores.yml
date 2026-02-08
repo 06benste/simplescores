@@ -1,12 +1,11 @@
 # Scrape scores/tables, update HTML in docs/, push to GitHub.
 # Enable GitHub Pages from branch main, folder /docs.
+# Schedule: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule (default branch only; min interval 5 min).
 name: Update scores & tables
 
 on:
   schedule:
-    # Run every 10 minutes during typical match hours (10:00-23:59 UTC)
-    # The script will check schedule.json to see if it should actually run at this time
-    # This allows dynamic scheduling based on actual fixture times while minimizing wasted runs
+    # Every 10 minutes 10:00–23:59 UTC; script uses schedule.json to decide if it actually runs
     - cron: '*/10 10-23 * * *'
   workflow_dispatch:
 

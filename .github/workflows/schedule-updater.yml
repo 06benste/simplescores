@@ -1,10 +1,12 @@
-# Daily scheduler that fetches fixtures and updates the scraper workflow schedule
+# Daily scheduler that fetches fixtures and updates the scraper workflow schedule.
+# Schedule trigger: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule
+# - Runs only when this file is on the default branch. Re-enable in Actions tab if disabled after 60 days inactivity.
+# - Cron is UTC; avoid minute 0 to reduce delay (GitHub: "High load times include the start of every hour").
 name: Update Scraper Schedule
 
 on:
   schedule:
-    # Run daily at 2am UTC to set up the day's scraping schedule
-    - cron: '0 2 * * *'
+    - cron: '5 2 * * *'   # 02:05 UTC daily (POSIX: min hour day month dow)
   workflow_dispatch:
 
 permissions:
