@@ -44,6 +44,10 @@ jobs:
           import os
           from datetime import datetime, timezone, date
           from pathlib import Path
+          from zoneinfo import ZoneInfo
+          
+          def today_uk():
+              return datetime.now(ZoneInfo("Europe/London")).date()
           
           # Check if this is a manual workflow_dispatch trigger
           # GITHUB_EVENT_NAME will be 'workflow_dispatch' for manual runs
@@ -66,9 +70,9 @@ jobs:
               print(f'Error reading schedule file: {e}. Running scraper anyway.')
               sys.exit(0)
           
-          # Check if schedule is for today
-          if schedule.get('date') != date.today().isoformat():
-              print(f'Schedule is for {schedule.get(\"date\")}, not today. Skipping.')
+          # Check if schedule is for today (UK time so match day aligns with user expectation)
+          if schedule.get('date') != today_uk().isoformat():
+              print(f'Schedule is for {schedule.get(\"date\")}, not today (UK). Skipping.')
               sys.exit(1)
           
           # Check current time

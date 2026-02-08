@@ -9,6 +9,11 @@ import json
 import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+# Use UK time for "today" so fixture schedule matches the day users expect
+def _today_uk() -> date:
+    return datetime.now(ZoneInfo("Europe/London")).date()
 
 import requests
 from bs4 import BeautifulSoup
@@ -87,24 +92,34 @@ def parse_time_12hr(time_str: str) -> tuple[int, int] | None:
 
 
 def parse_match_date(date_str: str) -> date | None:
-    """Parse date string like 'Sunday 8th February' to date object, assuming current year."""
-    if not date_str:
+    """Parse date string to date object. Handles ISO, 'Sunday 8th February', and dd/mm/yyyy."""
+    if not date_str or not isinstance(date_str, str):
         return None
-    
-    # Remove weekday if present
-    date_str = re.sub(r'^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s', '', date_str, flags=re.I)
-    
+    s = date_str.strip()
+    if not s:
+        return None
+
+    # ISO date or datetime (e.g. "2026-02-08" or "2026-02-08T12:30:00" or "2026-02-08T12:30:00Z")
+    if re.match(r"^\d{4}-\d{2}-\d{2}", s):
+        try:
+            # Take just the date part if there's a T
+            date_part = s.split("T")[0]
+            return datetime.strptime(date_part, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # Remove weekday if present (e.g. "Sunday 8th February")
+    s = re.sub(r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+", "", s, flags=re.I)
     # Remove ordinal suffixes
-    date_str = re.sub(r'(\d{1,2})(st|nd|rd|th)', r'\1', date_str, flags=re.I)
-    
+    s = re.sub(r"(\d{1,2})(st|nd|rd|th)", r"\1", s, flags=re.I)
+
     try:
-        dt = datetime.strptime(date_str.strip(), "%d %B")
-        dt = dt.replace(year=date.today().year)
+        dt = datetime.strptime(s.strip(), "%d %B")
+        dt = dt.replace(year=_today_uk().year)
         return dt.date()
     except ValueError:
         try:
-            # Try other formats if needed
-            dt = datetime.strptime(date_str.strip(), "%d/%m/%Y")
+            dt = datetime.strptime(s.strip(), "%d/%m/%Y")
             return dt.date()
         except ValueError:
             return None
@@ -112,10 +127,12 @@ def parse_match_date(date_str: str) -> date | None:
 
 def fetch_today_fixtures() -> list[tuple[int, int]]:
     """Fetch all fixture times for today across all leagues. Returns list of (hour, minute) tuples."""
-    today = date.today()
-    
+    today = _today_uk()
+    print(f"Today (UK): {today.isoformat()}")
+    print("Matches found:")
     fixture_times = set()  # Use set to avoid duplicates
-    
+    printed_matches = set()  # (league_name, home, away) to avoid printing same match twice
+
     for league_name, urls in LEAGUES.items():
         for url_key in ["scores_url", "results_url"]:
             url = urls.get(url_key)
@@ -143,7 +160,8 @@ def fetch_today_fixtures() -> list[tuple[int, int]]:
                     except json.JSONDecodeError:
                         continue
                     
-                    match_date_str = match_data.get("start", {}).get("date", "")
+                    start_info = match_data.get("start", {})
+                    match_date_str = start_info.get("date", "") or start_info.get("datetime", "") or start_info.get("iso", "")
                     match_date = parse_match_date(match_date_str)
                     if match_date != today:
                         continue
@@ -163,6 +181,13 @@ def fetch_today_fixtures() -> list[tuple[int, int]]:
                     
                     if parsed:
                         fixture_times.add(parsed)
+                        home = match_data.get("teams", {}).get("home", {}).get("name", {}).get("full", "?")
+                        away = match_data.get("teams", {}).get("away", {}).get("name", {}).get("full", "?")
+                        match_key = (league_name, home, away)
+                        if match_key not in printed_matches:
+                            printed_matches.add(match_key)
+                            time_display = time_12hr if time_12hr else f"{parsed[0]:02d}:{parsed[1]:02d}"
+                            print(f"  [{league_name}] {time_display}  {home} vs {away}")
             
             except Exception as e:
                 print(f"Error fetching fixtures for {league_name} from {url_key}: {e}", file=__import__("sys").stderr)
@@ -194,16 +219,16 @@ def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
     
     # Start 30 minutes before earliest game
     start_hour, start_min = earliest
-    start_time = datetime.combine(date.today(), datetime.min.time().replace(hour=start_hour, minute=start_min))
+    start_time = datetime.combine(_today_uk(), datetime.min.time().replace(hour=start_hour, minute=start_min))
     start_time -= timedelta(minutes=30)
     
     # End 115 minutes after last game starts
     end_hour, end_min = latest
-    end_time = datetime.combine(date.today(), datetime.min.time().replace(hour=end_hour, minute=end_min))
+    end_time = datetime.combine(_today_uk(), datetime.min.time().replace(hour=end_hour, minute=end_min))
     end_time += timedelta(minutes=115)
     
     # Final update 2.5 hours (150 minutes) after last game
-    final_time = datetime.combine(date.today(), datetime.min.time().replace(hour=end_hour, minute=end_min))
+    final_time = datetime.combine(_today_uk(), datetime.min.time().replace(hour=end_hour, minute=end_min))
     final_time += timedelta(minutes=150)
     
     # Generate run times for every 10 minutes
@@ -224,7 +249,7 @@ def calculate_schedule_times(fixture_times: list[tuple[int, int]]) -> dict:
     
     return {
         "has_games": True,
-        "date": date.today().isoformat(),
+        "date": _today_uk().isoformat(),
         "earliest_game": earliest,
         "latest_game": latest,
         "start_time": (start_time.hour, start_time.minute),
@@ -320,7 +345,7 @@ def main() -> None:
     
     if not fixture_times:
         print("No fixtures found for today.")
-        schedule_data = {"has_games": False, "date": date.today().isoformat(), "run_times": []}
+        schedule_data = {"has_games": False, "date": _today_uk().isoformat(), "run_times": []}
     else:
         print(f"Found {len(fixture_times)} fixtures for today.")
         print(f"Earliest: {min(fixture_times)}, Latest: {max(fixture_times)}")

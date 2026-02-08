@@ -12,6 +12,11 @@ import subprocess
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+# Use UK time for "today" so scores match the day users expect (e.g. Sunday in UK = Sunday's games)
+def _today_uk() -> date:
+    return datetime.now(ZoneInfo("Europe/London")).date()
 
 import requests
 from bs4 import BeautifulSoup
@@ -35,27 +40,33 @@ LEAGUE_NAMES = {
 
 LEAGUES = {
     "premier_league": {
-        "scores_url": "https://www.skysports.com/premier-league-results",
+        "fixtures_url": "https://www.skysports.com/premier-league-fixtures",
+        "results_url": "https://www.skysports.com/premier-league-results",
         "table_url": "https://www.skysports.com/premier-league-table",
     },
     "championship": {
-        "scores_url": "https://www.skysports.com/championship-results",
+        "fixtures_url": "https://www.skysports.com/championship-fixtures",
+        "results_url": "https://www.skysports.com/championship-results",
         "table_url": "https://www.skysports.com/championship-table",
     },
     "league_one": {
-        "scores_url": "https://www.skysports.com/league-1-results",
+        "fixtures_url": "https://www.skysports.com/league-1-fixtures",
+        "results_url": "https://www.skysports.com/league-1-results",
         "table_url": "https://www.skysports.com/league-1-table",
     },
     "league_two": {
-        "scores_url": "https://www.skysports.com/league-2-results",
+        "fixtures_url": "https://www.skysports.com/league-2-fixtures",
+        "results_url": "https://www.skysports.com/league-2-results",
         "table_url": "https://www.skysports.com/league-2-table",
     },
     "fa_cup": {
-        "scores_url": "https://www.skysports.com/fa-cup-results",
+        "fixtures_url": "https://www.skysports.com/fa-cup-fixtures",
+        "results_url": "https://www.skysports.com/fa-cup-results",
         "table_url": None,
     },
     "carabao_cup": {
-        "scores_url": "https://www.skysports.com/carabao-cup-results",
+        "fixtures_url": "https://www.skysports.com/carabao-cup-fixtures",
+        "results_url": "https://www.skysports.com/carabao-cup-results",
         "table_url": None,
     },
 }
@@ -162,7 +173,7 @@ def _is_today_match(match: dict, match_text: str = "", context: str = "", page_t
     
     text = (match_text or match.get("text") or "").lower()
     full_context = (context or "").lower() + " " + text
-    today = date.today()
+    today = _today_uk()
     today_day = today.strftime("%A").lower()
     day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -232,177 +243,162 @@ def _clean_team(words: list[str], take_last: bool, max_words: int = 3) -> str:
     return " ".join(slice_)[:30]
 
 
-def scrape_scores() -> dict:
+def _match_has_score_or_live(m: dict) -> bool:
+    """True if match has a score or is live/HT/FT (i.e. from results page)."""
+    if m.get("status") in ("LIVE", "HT", "FT"):
+        return True
+    if (m.get("score1") or "") != "" or (m.get("score2") or "") != "":
+        return True
+    return False
+
+
+def _extract_today_matches_from_soup(soup: "BeautifulSoup", today: date, today_str: str, today_str_alt: str) -> list[dict]:
+    """Parse a fixtures or results page; return list of today's match dicts."""
     import json
+    matches = []
+    seen = set()
+    match_sections = soup.find_all("div", class_="ui-tournament-matches")
+
+    for match_section in match_sections:
+        date_header = None
+        current = match_section.find_previous()
+        while current:
+            if current.name == "div":
+                classes = current.get("class", [])
+                if isinstance(classes, list) and any("ui-sitewide-component-header__wrapper--h3" in str(c) for c in classes):
+                    date_header = current
+                    break
+            if current.name == "div" and "ui-tournament-matches" in current.get("class", []):
+                break
+            current = current.find_previous()
+
+        section_date = ""
+        if date_header:
+            date_span = date_header.find("span", {"data-role": "short-text-target"})
+            if date_span:
+                section_date = date_span.get_text(strip=True)
+            else:
+                header_text = date_header.get_text(strip=True)
+                if header_text:
+                    section_date = header_text
+        if not section_date:
+            continue
+        if not _parse_date_header(section_date, today):
+            continue
+
+        match_items = match_section.find_all("div", class_="ui-sport-match-score")
+        for match_item in match_items:
+            data_state = match_item.get("data-state")
+            if not data_state:
+                continue
+            try:
+                match_data = json.loads(data_state)
+            except json.JSONDecodeError:
+                continue
+            match_date = match_data.get("start", {}).get("date", "")
+            if match_date:
+                match_is_today = (
+                    match_date.lower() == today_str.lower()
+                    or match_date.lower() == today_str_alt.lower()
+                    or _parse_date_header(match_date, today)
+                    or _extract_date_from_context(match_date.lower(), today)
+                )
+                if not match_is_today:
+                    continue
+            home_team = match_data.get("teams", {}).get("home", {}).get("name", {}).get("full", "")
+            away_team = match_data.get("teams", {}).get("away", {}).get("name", {}).get("full", "")
+            if not home_team or not away_team:
+                continue
+            home_score = match_data.get("teams", {}).get("home", {}).get("score", {}).get("current")
+            away_score = match_data.get("teams", {}).get("away", {}).get("score", {}).get("current")
+            match_state = match_data.get("matchState", "").lower()
+            is_result = match_data.get("isResult", False)
+            is_in_play = match_data.get("isInPlay", False)
+            currently_playing = match_data.get("currentlyPlaying", False)
+            status = "FIXTURE"
+            if currently_playing or is_in_play:
+                status = "LIVE"
+            elif match_state == "ht" or "half time" in match_data.get("statusDescription", {}).get("full", "").lower():
+                status = "HT"
+            elif is_result or match_state == "ft":
+                status = "FT"
+            time_12hr = match_data.get("start", {}).get("time12hr", "")
+            date_time = time_12hr if time_12hr else ""
+            key = f"{home_team}_{home_score}_{away_team}_{away_score}"
+            if key not in seen:
+                seen.add(key)
+                matches.append({
+                    "team1": home_team,
+                    "team2": away_team,
+                    "score1": str(home_score) if home_score is not None else "",
+                    "score2": str(away_score) if away_score is not None else "",
+                    "status": status,
+                    "date_time": date_time,
+                    "text": f"{home_team} {home_score if home_score is not None else ''} - {away_score if away_score is not None else ''} {away_team}",
+                })
+
+    if not matches:
+        all_text = soup.get_text(separator=" ", strip=True)
+        for m in re.finditer(
+            r"([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(\d+)\s*[-–—]\s*(\d+)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)",
+            all_text,
+        ):
+            t1_full, s1, s2, t2_full = m.group(1).strip(), m.group(2), m.group(3), m.group(4).strip()
+            t1 = _clean_team(t1_full.split(), True)
+            t2 = _clean_team(t2_full.split(), False)
+            key = f"{t1}_{s1}_{t2}_{s2}"
+            if key not in seen and t1 and t2 and len(t1) > 2 and len(t2) > 2:
+                seen.add(key)
+                matches.append({
+                    "team1": t1, "team2": t2, "score1": s1, "score2": s2,
+                    "status": "FT", "date_time": "",
+                    "text": f"{t1_full} {s1} - {s2} {t2_full}",
+                })
+    return matches
+
+
+def scrape_scores() -> dict:
+    """Scrape today's matches from both fixtures and results pages, then merge.
+    Fixtures page has upcoming games (with kick-off times); results page has live/finished.
+    Using both gives a complete picture for the day."""
     out = {}
-    today = date.today()
-    # Format: "Sunday 25th January" - need to add ordinal suffix
+    today = _today_uk()
     day_name = today.strftime("%A")
     day_num = today.day
     month_name = today.strftime("%B")
-    
-    # Add ordinal suffix (1st, 2nd, 3rd, 4th, etc.)
     if 10 <= day_num % 100 <= 20:
         suffix = "th"
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(day_num % 10, "th")
-    
-    today_str = f"{day_name} {day_num}{suffix} {month_name}"  # "Sunday 25th January"
-    today_str_alt = f"{day_name} {day_num} {month_name}"  # "Sunday 25 January" (fallback)
-    
+    today_str = f"{day_name} {day_num}{suffix} {month_name}"
+    today_str_alt = f"{day_name} {day_num} {month_name}"
+
     for league_name, urls in LEAGUES.items():
         try:
-            r = requests.get(
-                urls["scores_url"],
-                timeout=10,
-                headers={"User-Agent": USER_AGENT},
+            # Fetch both fixtures (upcoming) and results (live/finished) for today
+            matches_by_key = {}  # (team1, team2) -> match
+            for url_key in ("fixtures_url", "results_url"):
+                url = urls.get(url_key)
+                if not url:
+                    continue
+                r = requests.get(url, timeout=10, headers={"User-Agent": USER_AGENT})
+                r.raise_for_status()
+                soup = BeautifulSoup(r.content, "html.parser")
+                for match in _extract_today_matches_from_soup(soup, today, today_str, today_str_alt):
+                    key = (match["team1"], match["team2"])
+                    existing = matches_by_key.get(key)
+                    if existing is None:
+                        matches_by_key[key] = match
+                    elif _match_has_score_or_live(match) and not _match_has_score_or_live(existing):
+                        # Prefer result (score/live) over fixture-only
+                        matches_by_key[key] = match
+                    # else keep existing (e.g. already have result)
+
+            # Sort by kick-off time then team names
+            matches = sorted(
+                matches_by_key.values(),
+                key=lambda m: (m.get("date_time") or "", m["team1"], m["team2"]),
             )
-            r.raise_for_status()
-            soup = BeautifulSoup(r.content, "html.parser")
-            matches = []
-            seen = set()
-            
-            # Find all match sections and check their associated date headers
-            # Look for date headers with the exact structure: div with class containing "ui-sitewide-component-header__wrapper--h3"
-            # containing a span with data-role="short-text-target" with date text like "Thursday 1st January"
-            match_sections = soup.find_all("div", class_="ui-tournament-matches")
-            
-            for match_section in match_sections:
-                # Find the preceding date header for this match section
-                # Search backwards through siblings and parents
-                date_header = None
-                current = match_section.find_previous()
-                
-                # Search backwards for the date header
-                while current:
-                    # Check if this is a date header div with the expected class
-                    if current.name == "div":
-                        classes = current.get("class", [])
-                        if isinstance(classes, list) and any("ui-sitewide-component-header__wrapper--h3" in str(c) for c in classes):
-                            date_header = current
-                            break
-                    # Stop if we hit another match section (means we've gone too far)
-                    if current.name == "div" and "ui-tournament-matches" in current.get("class", []):
-                        break
-                    current = current.find_previous()
-                
-                # Extract date text from the header
-                section_date = ""
-                if date_header:
-                    # Look for span with data-role="short-text-target" (the exact structure user showed)
-                    date_span = date_header.find("span", {"data-role": "short-text-target"})
-                    if date_span:
-                        section_date = date_span.get_text(strip=True)
-                    else:
-                        # Fallback: try to find any text in the header
-                        header_text = date_header.get_text(strip=True)
-                        if header_text:
-                            section_date = header_text
-                
-                # Only include matches from sections with today's date header
-                # If no date header found, skip this section entirely (be strict)
-                if not section_date:
-                    continue
-                
-                # Check if this is today's section using the precise date header parser
-                is_today = _parse_date_header(section_date, today)
-                
-                # If section date doesn't match today, skip all matches in this section
-                if not is_today:
-                    continue
-                
-                # Extract matches from this section
-                match_items = match_section.find_all("div", class_="ui-sport-match-score")
-                
-                for match_item in match_items:
-                    # Get match data from data-state attribute
-                    data_state = match_item.get("data-state")
-                    if not data_state:
-                        continue
-                    
-                    try:
-                        match_data = json.loads(data_state)
-                    except json.JSONDecodeError:
-                        continue
-                    
-                    # Additional validation: check date in match data if available
-                    # This is a secondary check since we've already filtered by section date header
-                    match_date = match_data.get("start", {}).get("date", "")
-                    if match_date:
-                        match_is_today = (
-                            match_date.lower() == today_str.lower() or
-                            match_date.lower() == today_str_alt.lower() or
-                            _parse_date_header(match_date, today) or
-                            _extract_date_from_context(match_date.lower(), today)
-                        )
-                        # If match data explicitly says it's not today, skip (double-check)
-                        if not match_is_today:
-                            continue
-                    
-                    # Extract team names
-                    home_team = match_data.get("teams", {}).get("home", {}).get("name", {}).get("full", "")
-                    away_team = match_data.get("teams", {}).get("away", {}).get("name", {}).get("full", "")
-                    
-                    if not home_team or not away_team:
-                        continue
-                    
-                    # Extract scores
-                    home_score = match_data.get("teams", {}).get("home", {}).get("score", {}).get("current")
-                    away_score = match_data.get("teams", {}).get("away", {}).get("score", {}).get("current")
-                    
-                    # Determine status
-                    match_state = match_data.get("matchState", "").lower()
-                    is_fixture = match_data.get("isFixture", False)
-                    is_result = match_data.get("isResult", False)
-                    is_in_play = match_data.get("isInPlay", False)
-                    currently_playing = match_data.get("currentlyPlaying", False)
-                    
-                    status = "FIXTURE"
-                    if currently_playing or is_in_play:
-                        status = "LIVE"
-                    elif match_state == "ht" or "half time" in match_data.get("statusDescription", {}).get("full", "").lower():
-                        status = "HT"
-                    elif is_result or match_state == "ft":
-                        status = "FT"
-                    
-                    # Extract time
-                    time_12hr = match_data.get("start", {}).get("time12hr", "")
-                    date_time = time_12hr if time_12hr else ""
-                    
-                    # Create match entry
-                    key = f"{home_team}_{home_score}_{away_team}_{away_score}"
-                    if key not in seen:
-                        seen.add(key)
-                        matches.append({
-                            "team1": home_team,
-                            "team2": away_team,
-                            "score1": str(home_score) if home_score is not None else "",
-                            "score2": str(away_score) if away_score is not None else "",
-                            "status": status,
-                            "date_time": date_time,
-                            "text": f"{home_team} {home_score if home_score is not None else ''} - {away_score if away_score is not None else ''} {away_team}",
-                        })
-            
-            # If no structured matches found, fall back to old method
-            if not matches:
-                all_text = soup.get_text(separator=" ", strip=True)
-                # Try to find matches using text patterns as fallback
-                for m in re.finditer(
-                    r"([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(\d+)\s*[-–—]\s*(\d+)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)",
-                    all_text,
-                ):
-                    t1_full, s1, s2, t2_full = m.group(1).strip(), m.group(2), m.group(3), m.group(4).strip()
-                    t1 = _clean_team(t1_full.split(), True)
-                    t2 = _clean_team(t2_full.split(), False)
-                    key = f"{t1}_{s1}_{t2}_{s2}"
-                    if key not in seen and t1 and t2 and len(t1) > 2 and len(t2) > 2:
-                        seen.add(key)
-                        matches.append({
-                            "team1": t1, "team2": t2, "score1": s1, "score2": s2,
-                            "status": "FT", "date_time": "",
-                            "text": f"{t1_full} {s1} - {s2} {t2_full}",
-                        })
-            
             out[league_name] = {"matches": matches, "last_updated": datetime.now().isoformat()}
         except Exception as e:
             print(f"Error scraping {league_name} scores: {e}", file=sys.stderr)
