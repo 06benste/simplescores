@@ -36,6 +36,9 @@ jobs:
       - name: Fetch fixtures and update schedule
         run: python schedule_scraper.py
 
+      - name: Update score pages with today's fixtures
+        run: python scrape_and_publish.py --no-push
+
       - name: Check for changes and commit
         run: |
           # Check if schedule.json changed
@@ -56,13 +59,23 @@ jobs:
             status_changed=true
           fi
           
+          # Check if any docs (score/table pages) changed
+          if git diff --quiet docs/ 2>/dev/null; then
+            docs_changed=false
+          else
+            docs_changed=true
+          fi
+          
           # Commit and push if anything changed
-          if [ "$schedule_changed" = "true" ] || [ "$status_changed" = "true" ]; then
+          if [ "$schedule_changed" = "true" ] || [ "$status_changed" = "true" ] || [ "$docs_changed" = "true" ]; then
             git add .github/schedule.json
             if [ -f docs/status.html ]; then
               git add docs/status.html
             fi
-            git commit -m "Update scraper schedule and status page for $(date +%Y-%m-%d) [skip ci]" || exit 0
+            if [ "$docs_changed" = "true" ]; then
+              git add docs/
+            fi
+            git commit -m "Update scraper schedule, status and score pages for $(date +%Y-%m-%d) [skip ci]" || exit 0
             git push
           else
             echo "No changes to commit."

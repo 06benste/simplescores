@@ -487,72 +487,65 @@ def scrape_tables() -> dict:
                             if text[1:].isdigit():
                                 signed_numeric_values.append((idx, int(text)))
                     
-                    # Find played: should be first reasonable number (0-46 for Championship, 0-38 for PL)
-                    # Championship can have up to 46 games, Premier League 38
+                    # Prefer header-derived column indices so we don't mix up GD and Pts
+                    # (Sky Sports: GD is signed +N/-N, Pts is last column; heuristics were picking GD as Pts)
                     played = ""
-                    for idx, value in numeric_values:
-                        if 0 <= value <= 46:  # Valid games played range (Championship max)
-                            played = str(value)
-                            break
-                    
-                    # Find points: check signed values first (for teams with deductions), then unsigned
-                    # Points can be negative due to deductions, or positive up to 138 (46*3)
                     points = ""
-                    # Try signed values first (these are likely points with deductions)
-                    for idx, value in reversed(signed_numeric_values):
-                        if -50 <= value <= 138:  # Valid points range (can be negative, max 46*3)
-                            points = str(value)
-                            break
-                    
-                    # If no signed value found, try unsigned from the end
-                    if not points:
-                        for idx, value in reversed(numeric_values):
-                            if 0 <= value <= 138:  # Valid points range (max 46*3 for Championship)
-                                points = str(value)
-                                break
-                    
-                    # Fallback: if we didn't find using heuristics, use column indices
-                    if not played and played_idx is not None:
+
+                    if played_idx is not None:
                         idx = played_idx if played_idx >= 0 else len(cells) + played_idx
                         if 0 <= idx < len(cells):
                             candidate = cells[idx].get_text(strip=True)
                             if candidate.isdigit() and 0 <= int(candidate) <= 46:
                                 played = candidate
-                    
-                    if not points and points_idx is not None:
+
+                    if points_idx is not None:
                         idx = points_idx if points_idx >= 0 else len(cells) + points_idx
                         if 0 <= idx < len(cells):
                             candidate = cells[idx].get_text(strip=True)
-                            # Handle negative numbers
                             if candidate.isdigit():
                                 val = int(candidate)
                                 if 0 <= val <= 138:
                                     points = candidate
-                            elif candidate.startswith('-') and candidate[1:].isdigit():
+                            elif candidate.startswith("-") and candidate[1:].isdigit():
                                 val = int(candidate)
                                 if -50 <= val <= 138:
                                     points = candidate
-                    
-                    # Final fallback: use standard positions
+
+                    # Heuristic fallback for played: first reasonable number (0-46)
+                    if not played:
+                        for idx, value in numeric_values:
+                            if 0 <= value <= 46:
+                                played = str(value)
+                                break
                     if not played and len(cells) > 2:
                         candidate = cells[2].get_text(strip=True)
                         if candidate.isdigit() and 0 <= int(candidate) <= 46:
                             played = candidate
-                    
+
+                    # Heuristic fallback for points: use last column (Pts), not signed (GD)
                     if not points:
                         candidate = cells[-1].get_text(strip=True)
-                        # Handle both positive and negative points
                         if candidate.isdigit():
                             val = int(candidate)
                             if 0 <= val <= 138:
                                 points = candidate
-                        elif candidate.startswith('-') and candidate[1:].isdigit():
+                        elif candidate.startswith("-") and candidate[1:].isdigit():
                             val = int(candidate)
                             if -50 <= val <= 138:
                                 points = candidate
-                        elif candidate.startswith('+') and candidate[1:].isdigit():
-                            # This is likely goal difference, not points
-                            pass
+                        elif candidate.startswith("+") and candidate[1:].isdigit():
+                            pass  # GD, not points
+                    if not points:
+                        for idx, value in reversed(numeric_values):
+                            if 0 <= value <= 138:
+                                points = str(value)
+                                break
+                    if not points:
+                        for idx, value in reversed(signed_numeric_values):
+                            if -50 <= value <= 138:
+                                points = str(value)
+                                break
                     
                     table_data.append({"position": pos, "team": team, "played": played, "points": points})
             out[league_name] = {"table": table_data, "last_updated": datetime.now().isoformat()}
