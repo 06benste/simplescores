@@ -46,7 +46,7 @@ jobs:
           from zoneinfo import ZoneInfo
           
           def today_uk():
-              return datetime.now(ZoneInfo("Europe/London")).date()
+              return datetime.now(ZoneInfo('Europe/London')).date()
           
           # Check if this is a manual workflow_dispatch trigger
           # GITHUB_EVENT_NAME will be 'workflow_dispatch' for manual runs
