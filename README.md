@@ -2,7 +2,7 @@
 
 **Live (well almost!) football scores and league tables** for the main English leagues and cups.
 
-👉 **Open the site:** [https://06benste.github.io/simplescores2/](https://06benste.github.io/simplescores2/)
+👉 **Open the site:** [https://06benste.github.io/simplescores2/](https://06benste.github.io/simplescores/)
 
 ---
 
